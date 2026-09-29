@@ -3,13 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>作文稿纸 & 答题纸在线生成器 - PaperGrid Studio</title>
-  <meta name="description" content="专业自定义稿纸与答题纸生成器：支持小学生大格作文纸、高考申论答题卡、留白行间槽、字数阶梯标记，一键导出高清矢量PDF、SVG与PNG。">
+  <title>作文纸、英语四线三格与横线纸生成器 - PaperGrid</title>
+  <meta name="description" content="自定义中文作文纸、英语四线三格和课业横线纸，实时预览每页版式，导出矢量 PDF、SVG 与高清 PNG。配置保存在本机，无需上传。">
   <link rel="stylesheet" href="style.css">
-  <!-- 矢量 PDF 生成库 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script defer src="config.js"></script>
+  <script defer src="layout.js"></script>
+  <script defer src="render.js"></script>
+  <script defer src="exports.js"></script>
+  <script defer src="app.js"></script>
 </head>
-<body>
+<body data-view="preview">
+  <noscript>请启用 JavaScript，才能预览和生成稿纸。</noscript>
   <!-- 顶部主导航 -->
   <header class="navbar">
     <div class="nav-left">
@@ -26,7 +30,7 @@
         </svg>
         <div class="brand-text">
           <div class="brand-title">稿纸生成器 <span>PaperGrid</span></div>
-          <div class="brand-desc">标准中文作文稿纸 & 答题纸生成器</div>
+          <div class="brand-desc">作文纸 · 英语四线三格 · 横线纸</div>
         </div>
       </div>
     </div>
@@ -37,14 +41,22 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
         <span>导出 PDF</span>
       </button>
-      <button id="topExportSvgBtn" class="action-btn btn-svg">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-        <span>导出 SVG</span>
-      </button>
-      <button id="topExportPngBtn" class="action-btn btn-png">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        <span>导出 PNG</span>
-      </button>
+      <details class="more-exports">
+        <summary class="sub-btn">更多导出</summary>
+        <div class="export-menu">
+          <button id="topExportSvgBtn" class="action-btn btn-svg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            <span>导出 SVG</span>
+          </button>
+          <button id="topExportPngBtn" class="action-btn btn-png">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <span>导出 PNG</span>
+          </button>
+          <label for="pngDpi">PNG 分辨率</label>
+          <select id="pngDpi"><option value="150">150 DPI · 较小文件</option><option value="300" selected>300 DPI · 高清打印</option></select>
+          <p class="helper-text">SVG / PNG 仅导出当前预览页。多页请使用 PDF。</p>
+        </div>
+      </details>
       <button id="topPrintBtn" class="action-btn btn-print">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         <span>打印</span>
@@ -52,14 +64,21 @@
     </div>
   </header>
 
+  <nav class="mobile-view-switch" aria-label="工作区视图">
+    <button type="button" data-workspace-view="settings" aria-pressed="false" aria-controls="settingsPanel">调整设置</button>
+    <button type="button" data-workspace-view="preview" aria-pressed="true" aria-controls="previewPanel">纸张预览</button>
+  </nav>
+  <div id="validationMessage" class="validation-message" role="alert" hidden></div>
+
   <div class="workspace">
     <!-- 左侧可滚动控制侧边栏 -->
-    <aside class="control-panel">
+    <aside class="control-panel" id="settingsPanel" aria-label="纸张设置">
       <!-- 预设模板卡片 -->
       <div class="card-section">
         <div class="section-header">
           <span class="icon">📝</span>
-          <h3>小学生作文规格预设</h3>
+          <h3>常用纸张预设</h3>
+          <span id="presetStatus" class="preset-status">预设模板</span>
         </div>
         <div class="preset-grid">
           <button type="button" class="preset-card active" data-preset="primary-300">
@@ -182,9 +201,13 @@
             </div>
 
             <div id="gapConfigInputs" class="field-grid grid-2" style="margin-top: 8px;">
+              <div class="field-item field-full">
+                <label for="gapMode">槽高计算方式</label>
+                <select id="gapMode"><option value="fixed">固定毫米数</option><option value="ratio">相对格高比例</option></select>
+              </div>
               <div class="field-item">
                 <label for="gapHeightMm">槽高固定值 (mm)</label>
-                <input type="number" id="gapHeightMm" value="2.2" min="0" max="15" step="0.1">
+                <input type="number" id="gapHeightMm" value="2" min="0" max="15" step="0.1">
               </div>
               <div class="field-item">
                 <div class="label-with-val">
@@ -275,7 +298,7 @@
         <div class="checkbox-box highlight-checkbox">
           <label>
             <input type="checkbox" id="englishFillVertical" checked>
-            <span><strong>纵向自动均分撑满</strong> (消除上下多余空白)</span>
+            <span><strong>纵向自动铺满</strong> (按组高与间距的比例缩放)</span>
           </label>
         </div>
         <div class="checkbox-box">
@@ -314,7 +337,7 @@
         <div class="checkbox-box highlight-checkbox">
           <label>
             <input type="checkbox" id="linedFillVertical" checked>
-            <span><strong>纵向自动均分撑满</strong> (自适应纸张高度)</span>
+            <span><strong>纵向自动均分撑满</strong> (自动计算实际行距)</span>
           </label>
         </div>
         <div class="checkbox-box">
@@ -362,13 +385,13 @@
         <div class="field-item">
           <label>网格线条颜色</label>
           <div class="color-picker-row">
-            <input type="color" id="lineColorPicker" value="#2c3038" class="native-color-picker">
+            <input type="color" id="lineColorPicker" value="#2c3038" class="native-color-picker" aria-label="自定义线条颜色">
             <div class="preset-colors">
-              <span class="color-pill active" data-color="#2c3038" style="background:#2c3038" title="经典墨黑"></span>
-              <span class="color-pill" data-color="#b92b27" style="background:#b92b27" title="经典红"></span>
-              <span class="color-pill" data-color="#1e7e34" style="background:#1e7e34" title="护眼绿"></span>
-              <span class="color-pill" data-color="#1565c0" style="background:#1565c0" title="经典蓝"></span>
-              <span class="color-pill" data-color="#718096" style="background:#718096" title="浅淡灰"></span>
+              <button type="button" class="color-pill active" data-color="#2c3038" style="background:#2c3038" aria-label="经典墨黑" aria-pressed="true"></button>
+              <button type="button" class="color-pill" data-color="#b92b27" style="background:#b92b27" aria-label="经典红" aria-pressed="false"></button>
+              <button type="button" class="color-pill" data-color="#1e7e34" style="background:#1e7e34" aria-label="护眼绿" aria-pressed="false"></button>
+              <button type="button" class="color-pill" data-color="#1565c0" style="background:#1565c0" aria-label="经典蓝" aria-pressed="false"></button>
+              <button type="button" class="color-pill" data-color="#718096" style="background:#718096" aria-label="浅淡灰" aria-pressed="false"></button>
             </div>
           </div>
         </div>
@@ -387,11 +410,11 @@
         <div class="field-item">
           <label>纸张背景底色</label>
           <div class="bg-palette">
-            <div class="bg-swatch active" data-bg="#ffffff" style="background:#ffffff" title="标准纯白"></div>
-            <div class="bg-swatch" data-bg="#fffdf5" style="background:#fffdf5" title="护眼米白"></div>
-            <div class="bg-swatch" data-bg="#fbf6ee" style="background:#fbf6ee" title="复古宣纸"></div>
-            <div class="bg-swatch" data-bg="#f4f9f4" style="background:#f4f9f4" title="护眼浅绿"></div>
-            <div class="bg-swatch" data-bg="#f8fafc" style="background:#f8fafc" title="极浅冷灰"></div>
+            <button type="button" class="bg-swatch active" data-bg="#ffffff" style="background:#ffffff" aria-label="标准纯白" aria-pressed="true"></button>
+            <button type="button" class="bg-swatch" data-bg="#fffdf5" style="background:#fffdf5" aria-label="护眼米白" aria-pressed="false"></button>
+            <button type="button" class="bg-swatch" data-bg="#fbf6ee" style="background:#fbf6ee" aria-label="复古宣纸" aria-pressed="false"></button>
+            <button type="button" class="bg-swatch" data-bg="#f4f9f4" style="background:#f4f9f4" aria-label="护眼浅绿" aria-pressed="false"></button>
+            <button type="button" class="bg-swatch" data-bg="#f8fafc" style="background:#f8fafc" aria-label="极浅冷灰" aria-pressed="false"></button>
           </div>
         </div>
       </div>
@@ -426,18 +449,32 @@
       <div class="card-section">
         <div class="section-header">
           <span class="icon">💾</span>
-          <h3>配置方案备份</h3>
+          <h3>我的配置与模板</h3>
+        </div>
+        <p class="helper-text" id="saveStatus">调整后自动保存</p>
+        <div class="field-item">
+          <label for="templateName">模板名称</label>
+          <input type="text" id="templateName" maxlength="30" placeholder="例如：三年级每周作文">
+        </div>
+        <button type="button" id="saveTemplateBtn" class="sub-btn">保存为自定义模板</button>
+        <div class="field-item">
+          <label for="savedTemplates">已保存的模板</label>
+          <select id="savedTemplates"><option value="">选择已保存的模板</option></select>
+        </div>
+        <div class="io-btn-row">
+          <button type="button" id="deleteTemplateBtn" class="sub-btn" disabled>删除选中模板</button>
+          <button type="button" id="resetConfigBtn" class="sub-btn">恢复默认配置</button>
         </div>
         <div class="io-btn-row">
           <button id="exportConfigBtn" class="sub-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             导出配置 JSON
           </button>
-          <label class="sub-btn file-input-label">
+          <button type="button" id="importConfigBtn" class="sub-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             导入配置 JSON
-            <input type="file" id="importConfigFile" accept=".json" style="display:none">
-          </label>
+          </button>
+          <input type="file" id="importConfigFile" accept=".json,application/json" hidden>
         </div>
       </div>
 
@@ -445,7 +482,7 @@
     </aside>
 
     <!-- 右侧纸张预览与缩放控制 -->
-    <main class="preview-panel">
+    <main class="preview-panel" id="previewPanel" aria-label="纸张预览">
       <!-- 预览状态栏与缩放控制器 -->
       <div class="preview-bar">
         <div class="spec-tags">
@@ -456,23 +493,33 @@
         </div>
 
         <div class="zoom-box">
-          <button id="zoomOut" class="tool-btn" title="缩小">-</button>
+          <button id="zoomOut" class="tool-btn" aria-label="缩小">-</button>
           <span id="zoomVal" class="zoom-text">100%</span>
-          <button id="zoomIn" class="tool-btn" title="放大">+</button>
-          <button id="zoomFit" class="tool-btn fit-btn" title="自适应窗口">自适应宽</button>
+          <button id="zoomIn" class="tool-btn" aria-label="放大">+</button>
+          <button id="zoomFit" class="tool-btn fit-btn" aria-pressed="true">整页适应</button>
         </div>
       </div>
+
+      <div class="page-toolbar">
+        <div class="page-navigation" aria-label="预览翻页">
+          <button type="button" id="previousPage" class="tool-btn" aria-label="上一页">‹</button>
+          <span id="pagePosition" aria-live="polite">1 / 1</span>
+          <button type="button" id="nextPage" class="tool-btn" aria-label="下一页">›</button>
+        </div>
+        <span id="pageExportHint" class="helper-text"></span>
+      </div>
+      <p id="layoutWarning" class="layout-warning" role="status" hidden></p>
 
       <!-- 纸张视图容器 (使用原生 SVG 矢量渲染，消除缩放摩尔纹与像素走样) -->
       <div class="paper-viewport" id="paperViewport">
         <div class="paper-sheet" id="paperSheet">
           <div id="svgContainer" class="svg-container"></div>
-          <canvas id="mainCanvas" style="display: none;"></canvas>
         </div>
       </div>
+      <p class="print-hint">打印请选择“实际大小 / 100%”，不要缩放至可打印区域。</p>
     </main>
   </div>
 
-  <script src="app.js"></script>
+  <div id="appStatus" class="app-status" role="status" aria-live="polite">配置仅保存在本机；跨设备使用请导出 JSON。</div>
 </body>
 </html>
