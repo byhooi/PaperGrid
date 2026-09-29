@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>作文稿纸 & 答题纸在线生成器 - PaperGrid Studio</title>
-  <meta name="description" content="专业自定义稿纸与答题纸生成器：支持标准作文纸、高考申论答题卡、留白行间槽、字数阶梯标记、双栏排版，一键导出高清矢量PDF、SVG与PNG。">
+  <meta name="description" content="专业自定义稿纸与答题纸生成器：支持小学生大格作文纸、高考申论答题卡、留白行间槽、字数阶梯标记，一键导出高清矢量PDF、SVG与PNG。">
   <link rel="stylesheet" href="style.css">
   <!-- 矢量 PDF 生成库 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -26,7 +26,7 @@
         </svg>
         <div class="brand-text">
           <div class="brand-title">稿纸生成器 <span>PaperGrid</span></div>
-          <div class="brand-desc">标准中文作文稿纸 & 考试答题纸生成工具</div>
+          <div class="brand-desc">标准中文作文稿纸 & 答题纸生成器</div>
         </div>
       </div>
     </div>
@@ -58,33 +58,33 @@
       <!-- 预设模板卡片 -->
       <div class="card-section">
         <div class="section-header">
-          <span class="icon">🎯</span>
-          <h3>常用模板预设</h3>
+          <span class="icon">🎒</span>
+          <h3>小学生大格推荐</h3>
         </div>
         <div class="preset-grid">
-          <button type="button" class="preset-card active" data-preset="sample-400">
-            <div class="card-name">原图同款 (400字)</div>
-            <div class="card-sub">20列 × 20行 · 阶梯字数 · 行槽</div>
+          <button type="button" class="preset-card active" data-preset="primary-large">
+            <div class="card-name">🌟 小学生大方格 (推荐)</div>
+            <div class="card-sub">15列 × 14行 · 约12mm大格 · 填满上下</div>
           </button>
-          <button type="button" class="preset-card" data-preset="sample-440">
-            <div class="card-name">原图同款 (440字)</div>
-            <div class="card-sub">20列 × 22行 · 紧凑版</div>
+          <button type="button" class="preset-card" data-preset="primary-giant">
+            <div class="card-name">👶 低年级超大方格</div>
+            <div class="card-sub">12列 × 11行 · 约15mm大格 · 1-2年级</div>
+          </button>
+          <button type="button" class="preset-card" data-preset="primary-tianzi">
+            <div class="card-name">✏️ 小学生大号田字格</div>
+            <div class="card-sub">12列 × 10行 · 田字虚线辅助</div>
+          </button>
+          <button type="button" class="preset-card" data-preset="sample-400">
+            <div class="card-name">📄 原图同款 (400字)</div>
+            <div class="card-sub">20列 × 20行 · 经典错开字数</div>
           </button>
           <button type="button" class="preset-card" data-preset="exam-800">
-            <div class="card-name">中高考作文 (800字)</div>
-            <div class="card-sub">A4双页 · 400字/页 · 考务栏</div>
-          </button>
-          <button type="button" class="preset-card" data-preset="exam-a3-double">
-            <div class="card-name">A3 试卷左右双栏</div>
-            <div class="card-sub">标准试卷拼版 · 800~1000字</div>
+            <div class="card-name">🎓 中高考作文 (800字)</div>
+            <div class="card-sub">双页 400字/页 · 考务栏</div>
           </button>
           <button type="button" class="preset-card" data-preset="shenlun">
-            <div class="card-name">申论大作文纸</div>
+            <div class="card-name">🏛️ 申论大作文纸</div>
             <div class="card-sub">25列 × 20行 (500字/页)</div>
-          </button>
-          <button type="button" class="preset-card" data-preset="tianzi-paper">
-            <div class="card-name">田字格作文练习</div>
-            <div class="card-sub">内含虚线辅助线 · 练字推荐</div>
           </button>
         </div>
       </div>
@@ -134,25 +134,41 @@
       <div class="card-section">
         <div class="section-header">
           <span class="icon">📐</span>
-          <h3>网格与行间留白槽</h3>
+          <h3>网格行列与尺寸优化</h3>
         </div>
+
+        <!-- 当前方格物理尺寸提示 -->
+        <div class="cell-size-banner">
+          <div class="size-title">实际打印方格大小：</div>
+          <div class="size-val" id="cellSizeDisplay">约 12.2 mm × 12.2 mm</div>
+        </div>
+
         <div class="field-grid grid-2">
           <div class="field-item">
             <label for="cols">每行列数 (字/行)</label>
-            <input type="number" id="cols" value="20" min="5" max="35">
+            <input type="number" id="cols" value="15" min="5" max="35">
+            <div class="helper-text">小学生推荐 12 ~ 15 字</div>
           </div>
           <div class="field-item">
-            <label for="rows">每栏行数</label>
-            <input type="number" id="rows" value="20" min="5" max="40">
+            <label for="rows">每页行数</label>
+            <input type="number" id="rows" value="14" min="5" max="40">
+            <div class="helper-text">小学生推荐 10 ~ 15 行</div>
           </div>
+        </div>
+
+        <div class="checkbox-box highlight-checkbox">
+          <label>
+            <input type="checkbox" id="fillVerticalHeight" checked>
+            <span><strong>纵向自动撑满页面</strong> (消除上下多余空白，最大化方格)</span>
+          </label>
         </div>
 
         <div class="field-item">
           <div class="label-with-val">
-            <label for="gapRatio">行间槽比例 (留白高度/方格高度)</label>
-            <span id="gapRatioVal">20%</span>
+            <label for="gapRatio">行间槽高度比例</label>
+            <span id="gapRatioVal">18%</span>
           </div>
-          <input type="range" id="gapRatio" min="0" max="0.5" step="0.01" value="0.2">
+          <input type="range" id="gapRatio" min="0" max="0.4" step="0.01" value="0.18">
           <div class="helper-text">留出标点符号行、修改标注行（如原图所示）</div>
         </div>
 
@@ -160,8 +176,8 @@
           <label for="gridHelperLine">格内辅助线</label>
           <select id="gridHelperLine">
             <option value="none" selected>无辅助线 (纯方格，原图同款)</option>
-            <option value="tian">田字虚线格</option>
-            <option value="mi">米字虚线格</option>
+            <option value="tian">田字虚线格 (低年级写字推荐)</option>
+            <option value="mi">米字虚线格 (书法笔画练习)</option>
           </select>
         </div>
 
@@ -190,8 +206,8 @@
           <div class="field-item">
             <label for="countStep">标注间隔</label>
             <select id="countStep">
-              <option value="100" selected>每 100 字</option>
               <option value="50">每 50 字</option>
+              <option value="100" selected>每 100 字</option>
               <option value="200">每 200 字</option>
               <option value="row">每一行末</option>
             </select>
@@ -215,22 +231,23 @@
         </div>
         <div class="field-grid grid-4">
           <div class="field-item">
-            <label for="marginTop">上</label>
-            <input type="number" id="marginTop" value="16" min="5" max="50">
+            <label for="marginTop">上边距</label>
+            <input type="number" id="marginTop" value="12" min="5" max="40">
           </div>
           <div class="field-item">
-            <label for="marginRight">右</label>
-            <input type="number" id="marginRight" value="15" min="5" max="50">
+            <label for="marginRight">右边距</label>
+            <input type="number" id="marginRight" value="12" min="5" max="40">
           </div>
           <div class="field-item">
-            <label for="marginBottom">下</label>
-            <input type="number" id="marginBottom" value="16" min="5" max="50">
+            <label for="marginBottom">下边距</label>
+            <input type="number" id="marginBottom" value="12" min="5" max="40">
           </div>
           <div class="field-item">
-            <label for="marginLeft">左</label>
-            <input type="number" id="marginLeft" value="15" min="5" max="50">
+            <label for="marginLeft">左边距</label>
+            <input type="number" id="marginLeft" value="12" min="5" max="40">
           </div>
         </div>
+        <div class="helper-text">调小上下边距（如 10~12mm）可以让方格更大、留白更少。</div>
       </div>
 
       <!-- 颜色、粗细与背景 -->
@@ -286,7 +303,7 @@
         <div class="checkbox-box">
           <label>
             <input type="checkbox" id="showHeaderInfo">
-            <span>添加考生信息栏 (姓名 / 班级 / 考号)</span>
+            <span>添加学生信息栏 (姓名 / 班级 / 学号)</span>
           </label>
         </div>
         <div class="checkbox-box">
@@ -331,8 +348,9 @@
       <div class="preview-bar">
         <div class="spec-tags">
           <span class="tag" id="tagPaper">A4 纵向</span>
-          <span class="tag" id="tagGrid">20列 × 20行</span>
-          <span class="tag tag-highlight" id="tagWords">400 字 / 页</span>
+          <span class="tag" id="tagGrid">15列 × 14行</span>
+          <span class="tag tag-highlight" id="tagCellSize">方格 12.2 × 12.2 mm</span>
+          <span class="tag" id="tagWords">210 字 / 页</span>
         </div>
 
         <div class="zoom-box">

@@ -319,6 +319,40 @@ input[type="range"] {
   color: var(--text-tertiary);
 }
 
+.cell-size-banner {
+  background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cell-size-banner .size-title {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.cell-size-banner .size-val {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  font-variant-numeric: tabular-nums;
+}
+
+.highlight-checkbox {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.highlight-checkbox label strong {
+  color: #1d4ed8;
+}
+
 /* 复选框组件 */
 .checkbox-box label {
   display: flex;
