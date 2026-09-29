@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>作文稿纸 & 答题纸 PDF 在线生成器</title>
+  <meta name="description" content="在线生成标准中文作文稿纸、考试答题纸、申论方格纸 PDF，支持自定义行列、间距槽、字数标记与多页导出。">
+  <link rel="stylesheet" href="style.css">
+  <!-- jsPDF 矢量 PDF 生成库 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 左侧控制面板 -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-box">
+          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <line x1="3" y1="9" x2="21" y2="9"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+            <line x1="15" y1="3" x2="15" y2="21"/>
+          </svg>
+          <div>
+            <h1>稿纸生成器</h1>
+            <span class="sub-title">PaperGrid Studio</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-content">
+        <!-- 快速预设 -->
+        <section class="control-group">
+          <label class="group-title">🎯 快捷预设</label>
+          <div class="preset-buttons">
+            <button type="button" class="preset-btn active" data-preset="sample-400">原图同款 (400字)</button>
+            <button type="button" class="preset-btn" data-preset="sample-440">原图同款 (440字/22行)</button>
+            <button type="button" class="preset-btn" data-preset="exam-800">中高考 (800字/双页)</button>
+            <button type="button" class="preset-btn" data-preset="shenlun">申论答题纸 (含题头)</button>
+            <button type="button" class="preset-btn" data-preset="clean-practice">纯练字方格 (无标记)</button>
+          </div>
+        </section>
+
+        <!-- 纸张与页面 -->
+        <section class="control-group">
+          <label class="group-title">📄 纸张与布局</label>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="paperSize">纸张规格</label>
+              <select id="paperSize">
+                <option value="a4" selected>A4 (210 × 297 mm)</option>
+                <option value="b5">B5 (176 × 250 mm)</option>
+                <option value="a3">A3 (297 × 420 mm)</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="paperOrientation">方向</label>
+              <select id="paperOrientation">
+                <option value="p" selected>纵向</option>
+                <option value="l">横向</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="pageCount">生成页数</label>
+              <input type="number" id="pageCount" value="1" min="1" max="10">
+            </div>
+            <div class="form-field">
+              <label for="pageMargin">页面边距 (mm)</label>
+              <input type="number" id="pageMargin" value="15" min="5" max="40" step="1">
+            </div>
+          </div>
+        </section>
+
+        <!-- 网格参数 -->
+        <section class="control-group">
+          <label class="group-title">📐 网格与行槽规格</label>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="cols">每行列数 (字/行)</label>
+              <input type="number" id="cols" value="20" min="5" max="35">
+            </div>
+            <div class="form-field">
+              <label for="rows">每页行数</label>
+              <input type="number" id="rows" value="20" min="5" max="40">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label for="gapRatio">行间槽比例 (槽高/格高)</label>
+              <div class="range-with-value">
+                <input type="range" id="gapRatio" min="0" max="0.5" step="0.01" value="0.2">
+                <span id="gapRatioVal">20%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row checkbox-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="splitVerticalLines">
+              <span>竖线穿透行间槽 (贯通到下一行)</span>
+            </label>
+          </div>
+        </section>
+
+        <!-- 字数标记与提示 -->
+        <section class="control-group">
+          <label class="group-title">🔢 字数计数标记</label>
+          <div class="form-row checkbox-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="showWordCount" checked>
+              <span>显示字数标记</span>
+            </label>
+          </div>
+
+          <div class="form-row" id="countOptionsArea">
+            <div class="form-field">
+              <label for="countStep">标记步长</label>
+              <select id="countStep">
+                <option value="100" selected>每 100 字</option>
+                <option value="50">每 50 字</option>
+                <option value="200">每 200 字</option>
+                <option value="row">每行末尾</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="countPosition">标记排版样式</label>
+              <select id="countPosition">
+                <option value="staggered" selected>原图阶梯错开 (1/4, 1/2, 3/4, 1)</option>
+                <option value="right">每段行末居右</option>
+                <option value="center">行槽正中央居中</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <!-- 标题栏与信息栏 -->
+        <section class="control-group">
+          <label class="group-title">✍️ 顶部信息区 (考务栏)</label>
+          <div class="form-row checkbox-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="showHeaderInfo">
+              <span>添加顶部考生信息栏 (姓名/班级/考号)</span>
+            </label>
+          </div>
+          <div class="form-row checkbox-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="showTitleLine">
+              <span>添加作文题目专用行</span>
+            </label>
+          </div>
+        </section>
+
+        <!-- 色彩与粗细 -->
+        <section class="control-group">
+          <label class="group-title">🎨 颜色与线宽</label>
+          <div class="color-palette">
+            <button type="button" class="color-dot active" data-color="#2c3038" title="经典墨黑 (原图款)" style="background: #2c3038;"></button>
+            <button type="button" class="color-dot" data-color="#b92b27" title="传统文科红" style="background: #b92b27;"></button>
+            <button type="button" class="color-dot" data-color="#1e7e34" title="答题卡护眼绿" style="background: #1e7e34;"></button>
+            <button type="button" class="color-dot" data-color="#1565c0" title="高考经典蓝" style="background: #1565c0;"></button>
+            <button type="button" class="color-dot" data-color="#6c757d" title="浅淡铅印灰" style="background: #6c757d;"></button>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label for="outerLineWidth">外边框粗细 (mm)</label>
+              <input type="number" id="outerLineWidth" value="0.35" min="0.1" max="1.5" step="0.05">
+            </div>
+            <div class="form-field">
+              <label for="innerLineWidth">内网格粗细 (mm)</label>
+              <input type="number" id="innerLineWidth" value="0.15" min="0.05" max="0.8" step="0.05">
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 底部导出操作栏 -->
+      <div class="sidebar-footer">
+        <button id="downloadPdfBtn" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          下载高清矢量 PDF
+        </button>
+        <div class="footer-actions">
+          <button id="printBtn" class="btn btn-secondary">🖨️ 打印</button>
+          <button id="resetBtn" class="btn btn-outline">🔄 重置</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 右侧纸张实时预览工作区 -->
+    <main class="preview-area">
+      <!-- 预览工具条 -->
+      <div class="preview-toolbar">
+        <div class="preview-info">
+          <span class="info-tag" id="paperSummaryTag">A4 纵向</span>
+          <span class="info-tag" id="gridSummaryTag">20 列 × 20 行 (400 字)</span>
+        </div>
+        <div class="zoom-controls">
+          <button type="button" id="zoomOutBtn" title="缩小">-</button>
+          <span id="zoomLevelText">100%</span>
+          <button type="button" id="zoomInBtn" title="放大">+</button>
+          <button type="button" id="zoomFitBtn" title="自适应窗口">自适应</button>
+        </div>
+      </div>
+
+      <!-- 预览主容器 (包含纸张阴影和高拟真画布) -->
+      <div class="canvas-viewport" id="canvasViewport">
+        <div class="paper-container" id="paperContainer">
+          <!-- 实时通过 Canvas 绘制以保证和 PDF 绝对 1:1 毫米级精确还原 -->
+          <canvas id="previewCanvas"></canvas>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
