@@ -93,9 +93,9 @@ const PRESET_TEMPLATES = {
     bgColor: '#ffffff',
     outerLineWidth: 0.35,
     innerLineWidth: 0.18,
-    showHeaderInfo: true,
+    showHeaderInfo: false,
     showTitleLine: false,
-    showPageNumber: true,
+    showPageNumber: false,
   },
   'lined-paper': {
     paperType: 'lined',
@@ -111,14 +111,14 @@ const PRESET_TEMPLATES = {
     linedStyle: 'solid',
     linedRows: 25,
     linedFillVertical: true,
-    linedMarginLine: true,
+    linedMarginLine: false,
     lineColor: '#2c3038',
     bgColor: '#ffffff',
     outerLineWidth: 0.35,
     innerLineWidth: 0.18,
     showHeaderInfo: false,
     showTitleLine: false,
-    showPageNumber: true,
+    showPageNumber: false,
   },
 };
 
@@ -249,7 +249,30 @@ function bindEventListeners() {
 
   // 纸张类型下拉切换
   dom.paperType.addEventListener('change', (e) => {
-    appState.paperType = e.target.value;
+    const newType = e.target.value;
+    if (newType !== appState.paperType) {
+      if (newType === 'english' && PRESET_TEMPLATES['english-four']) {
+        appState = { ...PRESET_TEMPLATES['english-four'] };
+        document.querySelectorAll('.preset-card').forEach((c) => {
+          c.classList.toggle('active', c.dataset.preset === 'english-four');
+        });
+        syncStateToForm();
+      } else if (newType === 'lined' && PRESET_TEMPLATES['lined-paper']) {
+        appState = { ...PRESET_TEMPLATES['lined-paper'] };
+        document.querySelectorAll('.preset-card').forEach((c) => {
+          c.classList.toggle('active', c.dataset.preset === 'lined-paper');
+        });
+        syncStateToForm();
+      } else if (newType === 'composition' && PRESET_TEMPLATES['primary-300']) {
+        appState = { ...PRESET_TEMPLATES['primary-300'] };
+        document.querySelectorAll('.preset-card').forEach((c) => {
+          c.classList.toggle('active', c.dataset.preset === 'primary-300');
+        });
+        syncStateToForm();
+      } else {
+        appState.paperType = newType;
+      }
+    }
     updateSectionVisibility();
     renderPreview();
   });
@@ -480,7 +503,7 @@ function syncStateToForm() {
   dom.linedStyle.value = appState.linedStyle || 'solid';
   dom.linedRows.value = appState.linedRows || 25;
   dom.linedFillVertical.checked = appState.linedFillVertical !== false;
-  dom.linedMarginLine.checked = appState.linedMarginLine !== false;
+  dom.linedMarginLine.checked = !!appState.linedMarginLine;
 
   // 样式与考务
   dom.lineColorPicker.value = appState.lineColor;
