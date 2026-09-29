@@ -1,433 +1,548 @@
 /**
- * 作文稿纸 & 答题纸 PDF 网页生成器
- * 核心逻辑：毫米级精准排版、Canvas 实时高清预览、jsPDF 矢量 PDF 导出
+ * 作文稿纸 & 考试答题纸生成器核心引擎
+ * 参考 paperme.toolooz.com 打造
+ * 支持：高清矢量 PDF 导出、SVG 矢量导出、超清 PNG 导出、浏览器打印、分栏试卷、田字/米字辅助线、JSON 配置导入导出
  */
 
-// 常用纸张毫米尺寸
-const PAPER_SIZES = {
-  a4: { w: 210, h: 297 },
-  b5: { w: 176, h: 250 },
-  a3: { w: 297, h: 420 },
+// 常用纸张毫米规格
+const PAPER_SPECS = {
+  a4: { w: 210, h: 297, name: 'A4' },
+  a3: { w: 297, h: 420, name: 'A3' },
+  b5: { w: 176, h: 250, name: 'B5' },
+  b4: { w: 250, h: 353, name: 'B4' },
+  a5: { w: 148, h: 210, name: 'A5' },
 };
 
-// 预设配置库
-const PRESETS = {
+// 预设模版库
+const PRESET_TEMPLATES = {
   'sample-400': {
     paperSize: 'a4',
     paperOrientation: 'p',
+    columnsCount: 1,
     pageCount: 1,
-    pageMargin: 15,
+    marginTop: 18,
+    marginRight: 15,
+    marginBottom: 18,
+    marginLeft: 15,
     cols: 20,
     rows: 20,
     gapRatio: 0.20,
+    gridHelperLine: 'none',
     splitVerticalLines: false,
     showWordCount: true,
     countStep: '100',
     countPosition: 'staggered',
-    showHeaderInfo: false,
-    showTitleLine: false,
-    color: '#2c3038',
+    lineColor: '#2c3038',
+    bgColor: '#ffffff',
     outerLineWidth: 0.35,
     innerLineWidth: 0.15,
+    showHeaderInfo: false,
+    showTitleLine: false,
+    showPageNumber: false,
   },
   'sample-440': {
     paperSize: 'a4',
     paperOrientation: 'p',
+    columnsCount: 1,
     pageCount: 1,
-    pageMargin: 15,
+    marginTop: 15,
+    marginRight: 15,
+    marginBottom: 15,
+    marginLeft: 15,
     cols: 20,
     rows: 22,
     gapRatio: 0.20,
+    gridHelperLine: 'none',
     splitVerticalLines: false,
     showWordCount: true,
     countStep: '100',
     countPosition: 'staggered',
-    showHeaderInfo: false,
-    showTitleLine: false,
-    color: '#2c3038',
+    lineColor: '#2c3038',
+    bgColor: '#ffffff',
     outerLineWidth: 0.35,
     innerLineWidth: 0.15,
+    showHeaderInfo: false,
+    showTitleLine: false,
+    showPageNumber: false,
   },
   'exam-800': {
     paperSize: 'a4',
     paperOrientation: 'p',
+    columnsCount: 1,
     pageCount: 2,
-    pageMargin: 16,
+    marginTop: 18,
+    marginRight: 16,
+    marginBottom: 18,
+    marginLeft: 16,
     cols: 20,
     rows: 20,
     gapRatio: 0.22,
+    gridHelperLine: 'none',
     splitVerticalLines: false,
     showWordCount: true,
     countStep: '100',
     countPosition: 'right',
+    lineColor: '#b92b27',
+    bgColor: '#fffdf5',
+    outerLineWidth: 0.40,
+    innerLineWidth: 0.18,
     showHeaderInfo: true,
     showTitleLine: true,
-    color: '#b92b27',
-    outerLineWidth: 0.4,
+    showPageNumber: true,
+  },
+  'exam-a3-double': {
+    paperSize: 'a3',
+    paperOrientation: 'l',
+    columnsCount: 2,
+    pageCount: 1,
+    marginTop: 20,
+    marginRight: 20,
+    marginBottom: 20,
+    marginLeft: 20,
+    cols: 20,
+    rows: 22,
+    gapRatio: 0.20,
+    gridHelperLine: 'none',
+    splitVerticalLines: false,
+    showWordCount: true,
+    countStep: '100',
+    countPosition: 'right',
+    lineColor: '#b92b27',
+    bgColor: '#ffffff',
+    outerLineWidth: 0.40,
     innerLineWidth: 0.18,
+    showHeaderInfo: true,
+    showTitleLine: true,
+    showPageNumber: true,
   },
   'shenlun': {
     paperSize: 'a4',
     paperOrientation: 'p',
+    columnsCount: 1,
     pageCount: 2,
-    pageMargin: 16,
+    marginTop: 18,
+    marginRight: 15,
+    marginBottom: 18,
+    marginLeft: 15,
     cols: 25,
     rows: 20,
-    gapRatio: 0.2,
+    gapRatio: 0.20,
+    gridHelperLine: 'none',
     splitVerticalLines: false,
     showWordCount: true,
     countStep: '100',
     countPosition: 'right',
+    lineColor: '#1e7e34',
+    bgColor: '#ffffff',
+    outerLineWidth: 0.40,
+    innerLineWidth: 0.18,
     showHeaderInfo: true,
     showTitleLine: false,
-    color: '#1e7e34',
-    outerLineWidth: 0.4,
-    innerLineWidth: 0.18,
+    showPageNumber: true,
   },
-  'clean-practice': {
+  'tianzi-paper': {
     paperSize: 'a4',
     paperOrientation: 'p',
+    columnsCount: 1,
     pageCount: 1,
-    pageMargin: 18,
-    cols: 16,
-    rows: 18,
+    marginTop: 20,
+    marginRight: 18,
+    marginBottom: 20,
+    marginLeft: 18,
+    cols: 15,
+    rows: 15,
     gapRatio: 0.25,
+    gridHelperLine: 'tian',
     splitVerticalLines: false,
     showWordCount: false,
     countStep: '100',
     countPosition: 'staggered',
-    showHeaderInfo: false,
-    showTitleLine: false,
-    color: '#1e7e34',
+    lineColor: '#1e7e34',
+    bgColor: '#fffdf5',
     outerLineWidth: 0.35,
     innerLineWidth: 0.15,
+    showHeaderInfo: false,
+    showTitleLine: false,
+    showPageNumber: false,
   },
 };
 
-// 状态管理
-let state = { ...PRESETS['sample-400'] };
-let zoom = 1.0;
+// 全局应用状态
+let appState = { ...PRESET_TEMPLATES['sample-400'] };
+let zoomScale = 1.0;
 
-// DOM 元素引用
-const elements = {
+// DOM 元素引用集合
+const dom = {
+  // 表单输入
   paperSize: document.getElementById('paperSize'),
   paperOrientation: document.getElementById('paperOrientation'),
+  columnsCount: document.getElementById('columnsCount'),
   pageCount: document.getElementById('pageCount'),
-  pageMargin: document.getElementById('pageMargin'),
+  marginTop: document.getElementById('marginTop'),
+  marginRight: document.getElementById('marginRight'),
+  marginBottom: document.getElementById('marginBottom'),
+  marginLeft: document.getElementById('marginLeft'),
   cols: document.getElementById('cols'),
   rows: document.getElementById('rows'),
   gapRatio: document.getElementById('gapRatio'),
   gapRatioVal: document.getElementById('gapRatioVal'),
+  gridHelperLine: document.getElementById('gridHelperLine'),
   splitVerticalLines: document.getElementById('splitVerticalLines'),
   showWordCount: document.getElementById('showWordCount'),
   countStep: document.getElementById('countStep'),
   countPosition: document.getElementById('countPosition'),
-  countOptionsArea: document.getElementById('countOptionsArea'),
-  showHeaderInfo: document.getElementById('showHeaderInfo'),
-  showTitleLine: document.getElementById('showTitleLine'),
+  wordCountArea: document.getElementById('wordCountArea'),
+  lineColorPicker: document.getElementById('lineColorPicker'),
   outerLineWidth: document.getElementById('outerLineWidth'),
   innerLineWidth: document.getElementById('innerLineWidth'),
-  downloadPdfBtn: document.getElementById('downloadPdfBtn'),
-  printBtn: document.getElementById('printBtn'),
-  resetBtn: document.getElementById('resetBtn'),
-  paperSummaryTag: document.getElementById('paperSummaryTag'),
-  gridSummaryTag: document.getElementById('gridSummaryTag'),
-  previewCanvas: document.getElementById('previewCanvas'),
-  paperContainer: document.getElementById('paperContainer'),
-  canvasViewport: document.getElementById('canvasViewport'),
-  zoomInBtn: document.getElementById('zoomInBtn'),
-  zoomOutBtn: document.getElementById('zoomOutBtn'),
-  zoomFitBtn: document.getElementById('zoomFitBtn'),
-  zoomLevelText: document.getElementById('zoomLevelText'),
+  showHeaderInfo: document.getElementById('showHeaderInfo'),
+  showTitleLine: document.getElementById('showTitleLine'),
+  showPageNumber: document.getElementById('showPageNumber'),
+
+  // 顶部导出按键
+  topExportPdfBtn: document.getElementById('topExportPdfBtn'),
+  topExportSvgBtn: document.getElementById('topExportSvgBtn'),
+  topExportPngBtn: document.getElementById('topExportPngBtn'),
+  topPrintBtn: document.getElementById('topPrintBtn'),
+
+  // 导入导出设置
+  exportConfigBtn: document.getElementById('exportConfigBtn'),
+  importConfigFile: document.getElementById('importConfigFile'),
+
+  // 预览与标签
+  tagPaper: document.getElementById('tagPaper'),
+  tagGrid: document.getElementById('tagGrid'),
+  tagWords: document.getElementById('tagWords'),
+  mainCanvas: document.getElementById('mainCanvas'),
+  paperSheet: document.getElementById('paperSheet'),
+  paperViewport: document.getElementById('paperViewport'),
+  zoomIn: document.getElementById('zoomIn'),
+  zoomOut: document.getElementById('zoomOut'),
+  zoomFit: document.getElementById('zoomFit'),
+  zoomVal: document.getElementById('zoomVal'),
 };
 
 /**
- * 初始化应用
+ * 启动程序
  */
-function initApp() {
-  bindEvents();
-  updateFormFromState();
-  fitZoomToViewport();
+function init() {
+  bindEventListeners();
+  syncStateToForm();
+  fitZoom();
   renderPreview();
 }
 
 /**
- * 绑定界面与输入事件
+ * 事件绑定
  */
-function bindEvents() {
-  // 预设按钮切换
-  document.querySelectorAll('.preset-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.preset-btn').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      const presetKey = btn.dataset.preset;
-      if (PRESETS[presetKey]) {
-        state = { ...PRESETS[presetKey] };
-        updateFormFromState();
+function bindEventListeners() {
+  // 模板预设点击
+  document.querySelectorAll('.preset-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.preset-card').forEach((c) => c.classList.remove('active'));
+      card.classList.add('active');
+      const presetKey = card.dataset.preset;
+      if (PRESET_TEMPLATES[presetKey]) {
+        appState = { ...PRESET_TEMPLATES[presetKey] };
+        syncStateToForm();
         renderPreview();
       }
     });
   });
 
-  // 颜色选择器
-  document.querySelectorAll('.color-dot').forEach((dot) => {
-    dot.addEventListener('click', () => {
-      document.querySelectorAll('.color-dot').forEach((d) => d.classList.remove('active'));
-      dot.classList.add('active');
-      state.color = dot.dataset.color;
+  // 线条颜色快速选择器
+  document.querySelectorAll('.color-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.color-pill').forEach((p) => p.classList.remove('active'));
+      pill.classList.add('active');
+      appState.lineColor = pill.dataset.color;
+      dom.lineColorPicker.value = appState.lineColor;
       renderPreview();
     });
   });
 
-  // 表单输入监听
-  const inputs = [
-    'paperSize',
-    'paperOrientation',
-    'pageCount',
-    'pageMargin',
-    'cols',
-    'rows',
-    'outerLineWidth',
-    'innerLineWidth',
-    'countStep',
-    'countPosition',
-  ];
-
-  inputs.forEach((id) => {
-    if (elements[id]) {
-      elements[id].addEventListener('change', () => {
-        readStateFromForm();
-        renderPreview();
-      });
-      elements[id].addEventListener('input', () => {
-        readStateFromForm();
-        renderPreview();
-      });
-    }
+  // 纸张底色选择
+  document.querySelectorAll('.bg-swatch').forEach((swatch) => {
+    swatch.addEventListener('click', () => {
+      document.querySelectorAll('.bg-swatch').forEach((s) => s.classList.remove('active'));
+      swatch.classList.add('active');
+      appState.bgColor = swatch.dataset.bg;
+      renderPreview();
+    });
   });
 
-  // 范围滑动条联动
-  elements.gapRatio.addEventListener('input', (e) => {
-    const val = Math.round(parseFloat(e.target.value) * 100);
-    elements.gapRatioVal.textContent = `${val}%`;
-    state.gapRatio = parseFloat(e.target.value);
+  // 原生取色器
+  dom.lineColorPicker.addEventListener('input', (e) => {
+    appState.lineColor = e.target.value;
+    document.querySelectorAll('.color-pill').forEach((p) => {
+      p.classList.toggle('active', p.dataset.color.toLowerCase() === appState.lineColor.toLowerCase());
+    });
     renderPreview();
   });
 
+  // 行间槽滑动条
+  dom.gapRatio.addEventListener('input', (e) => {
+    const ratio = parseFloat(e.target.value);
+    appState.gapRatio = ratio;
+    dom.gapRatioVal.textContent = `${Math.round(ratio * 100)}%`;
+    renderPreview();
+  });
+
+  // 基础输入项监听
+  const trackedInputs = [
+    'paperSize',
+    'paperOrientation',
+    'columnsCount',
+    'pageCount',
+    'marginTop',
+    'marginRight',
+    'marginBottom',
+    'marginLeft',
+    'cols',
+    'rows',
+    'gridHelperLine',
+    'countStep',
+    'countPosition',
+    'outerLineWidth',
+    'innerLineWidth',
+  ];
+
+  trackedInputs.forEach((id) => {
+    if (dom[id]) {
+      dom[id].addEventListener('change', onFormChange);
+      dom[id].addEventListener('input', onFormChange);
+    }
+  });
+
   // 复选框监听
-  ['splitVerticalLines', 'showWordCount', 'showHeaderInfo', 'showTitleLine'].forEach((id) => {
-    if (elements[id]) {
-      elements[id].addEventListener('change', (e) => {
-        state[id] = e.target.checked;
+  ['splitVerticalLines', 'showWordCount', 'showHeaderInfo', 'showTitleLine', 'showPageNumber'].forEach((id) => {
+    if (dom[id]) {
+      dom[id].addEventListener('change', (e) => {
+        appState[id] = e.target.checked;
         if (id === 'showWordCount') {
-          elements.countOptionsArea.style.display = e.target.checked ? 'flex' : 'none';
+          dom.wordCountArea.style.display = e.target.checked ? 'grid' : 'none';
         }
         renderPreview();
       });
     }
   });
 
-  // 缩放控制
-  elements.zoomInBtn.addEventListener('click', () => setZoom(zoom + 0.15));
-  elements.zoomOutBtn.addEventListener('click', () => setZoom(zoom - 0.15));
-  elements.zoomFitBtn.addEventListener('click', fitZoomToViewport);
+  // 缩放操作
+  dom.zoomIn.addEventListener('click', () => updateZoom(zoomScale + 0.15));
+  dom.zoomOut.addEventListener('click', () => updateZoom(zoomScale - 0.15));
+  dom.zoomFit.addEventListener('click', fitZoom);
 
-  // 滚轮缩放预览
-  elements.canvasViewport.addEventListener(
+  // 滚轮缩放
+  dom.paperViewport.addEventListener(
     'wheel',
     (e) => {
       if (e.ctrlKey) {
         e.preventDefault();
         const delta = e.deltaY < 0 ? 0.1 : -0.1;
-        setZoom(zoom + delta);
+        updateZoom(zoomScale + delta);
       }
     },
     { passive: false }
   );
 
-  // 窗口调整自适应
-  window.addEventListener('resize', () => {
-    // 保持预览比例
-  });
+  // 导出与打印按键
+  dom.topExportPdfBtn.addEventListener('click', () => exportPdf(false));
+  dom.topPrintBtn.addEventListener('click', () => exportPdf(true));
+  dom.topExportSvgBtn.addEventListener('click', exportSvg);
+  dom.topExportPngBtn.addEventListener('click', exportPng);
 
-  // 导出 PDF 与打印
-  elements.downloadPdfBtn.addEventListener('click', generatePdf);
-  elements.printBtn.addEventListener('click', () => {
-    generatePdf(true);
-  });
-
-  // 重置
-  elements.resetBtn.addEventListener('click', () => {
-    state = { ...PRESETS['sample-400'] };
-    document.querySelectorAll('.preset-btn').forEach((b) => {
-      b.classList.toggle('active', b.dataset.preset === 'sample-400');
-    });
-    updateFormFromState();
-    renderPreview();
-  });
+  // JSON 配置备份
+  dom.exportConfigBtn.addEventListener('click', exportConfiguration);
+  dom.importConfigFile.addEventListener('change', importConfiguration);
 }
 
 /**
- * 将状态同步到表单 UI
+ * 表单变更回调
  */
-function updateFormFromState() {
-  elements.paperSize.value = state.paperSize;
-  elements.paperOrientation.value = state.paperOrientation;
-  elements.pageCount.value = state.pageCount;
-  elements.pageMargin.value = state.pageMargin;
-  elements.cols.value = state.cols;
-  elements.rows.value = state.rows;
-  elements.gapRatio.value = state.gapRatio;
-  elements.gapRatioVal.textContent = `${Math.round(state.gapRatio * 100)}%`;
-  elements.splitVerticalLines.checked = state.splitVerticalLines;
-  elements.showWordCount.checked = state.showWordCount;
-  elements.countStep.value = state.countStep;
-  elements.countPosition.value = state.countPosition;
-  elements.showHeaderInfo.checked = state.showHeaderInfo;
-  elements.showTitleLine.checked = state.showTitleLine;
-  elements.outerLineWidth.value = state.outerLineWidth;
-  elements.innerLineWidth.value = state.innerLineWidth;
+function onFormChange() {
+  appState.paperSize = dom.paperSize.value;
+  appState.paperOrientation = dom.paperOrientation.value;
+  appState.columnsCount = parseInt(dom.columnsCount.value) || 1;
+  appState.pageCount = parseInt(dom.pageCount.value) || 1;
+  appState.marginTop = parseFloat(dom.marginTop.value) || 15;
+  appState.marginRight = parseFloat(dom.marginRight.value) || 15;
+  appState.marginBottom = parseFloat(dom.marginBottom.value) || 15;
+  appState.marginLeft = parseFloat(dom.marginLeft.value) || 15;
+  appState.cols = parseInt(dom.cols.value) || 20;
+  appState.rows = parseInt(dom.rows.value) || 20;
+  appState.gridHelperLine = dom.gridHelperLine.value;
+  appState.countStep = dom.countStep.value;
+  appState.countPosition = dom.countPosition.value;
+  appState.outerLineWidth = parseFloat(dom.outerLineWidth.value) || 0.35;
+  appState.innerLineWidth = parseFloat(dom.innerLineWidth.value) || 0.15;
 
-  elements.countOptionsArea.style.display = state.showWordCount ? 'flex' : 'none';
+  updateTags();
+  renderPreview();
+}
+
+/**
+ * 同步状态到表单 UI
+ */
+function syncStateToForm() {
+  dom.paperSize.value = appState.paperSize;
+  dom.paperOrientation.value = appState.paperOrientation;
+  dom.columnsCount.value = appState.columnsCount;
+  dom.pageCount.value = appState.pageCount;
+  dom.marginTop.value = appState.marginTop;
+  dom.marginRight.value = appState.marginRight;
+  dom.marginBottom.value = appState.marginBottom;
+  dom.marginLeft.value = appState.marginLeft;
+  dom.cols.value = appState.cols;
+  dom.rows.value = appState.rows;
+  dom.gapRatio.value = appState.gapRatio;
+  dom.gapRatioVal.textContent = `${Math.round(appState.gapRatio * 100)}%`;
+  dom.gridHelperLine.value = appState.gridHelperLine;
+  dom.splitVerticalLines.checked = appState.splitVerticalLines;
+  dom.showWordCount.checked = appState.showWordCount;
+  dom.countStep.value = appState.countStep;
+  dom.countPosition.value = appState.countPosition;
+  dom.wordCountArea.style.display = appState.showWordCount ? 'grid' : 'none';
+  dom.lineColorPicker.value = appState.lineColor;
+  dom.outerLineWidth.value = appState.outerLineWidth;
+  dom.innerLineWidth.value = appState.innerLineWidth;
+  dom.showHeaderInfo.checked = appState.showHeaderInfo;
+  dom.showTitleLine.checked = appState.showTitleLine;
+  dom.showPageNumber.checked = appState.showPageNumber;
 
   // 颜色高亮
-  document.querySelectorAll('.color-dot').forEach((dot) => {
-    dot.classList.toggle('active', dot.dataset.color.toLowerCase() === state.color.toLowerCase());
+  document.querySelectorAll('.color-pill').forEach((pill) => {
+    pill.classList.toggle('active', pill.dataset.color.toLowerCase() === appState.lineColor.toLowerCase());
   });
 
-  updateSummaryTags();
+  document.querySelectorAll('.bg-swatch').forEach((swatch) => {
+    swatch.classList.toggle('active', swatch.dataset.bg.toLowerCase() === appState.bgColor.toLowerCase());
+  });
+
+  updateTags();
 }
 
 /**
- * 从表单 UI 读取到状态对象
+ * 更新预览标签状态
  */
-function readStateFromForm() {
-  state.paperSize = elements.paperSize.value;
-  state.paperOrientation = elements.paperOrientation.value;
-  state.pageCount = parseInt(elements.pageCount.value) || 1;
-  state.pageMargin = parseFloat(elements.pageMargin.value) || 15;
-  state.cols = parseInt(elements.cols.value) || 20;
-  state.rows = parseInt(elements.rows.value) || 20;
-  state.gapRatio = parseFloat(elements.gapRatio.value) || 0.2;
-  state.countStep = elements.countStep.value;
-  state.countPosition = elements.countPosition.value;
-  state.outerLineWidth = parseFloat(elements.outerLineWidth.value) || 0.35;
-  state.innerLineWidth = parseFloat(elements.innerLineWidth.value) || 0.15;
+function updateTags() {
+  const spec = PAPER_SPECS[appState.paperSize] || PAPER_SPECS.a4;
+  const orientStr = appState.paperOrientation === 'p' ? '纵向' : '横向';
+  dom.tagPaper.textContent = `${spec.name} ${orientStr} · ${appState.columnsCount === 2 ? '双栏' : '单栏'}`;
 
-  updateSummaryTags();
-}
+  dom.tagGrid.textContent = `${appState.cols}列 × ${appState.rows}行`;
 
-function updateSummaryTags() {
-  const sizeName = state.paperSize.toUpperCase();
-  const orientName = state.paperOrientation === 'p' ? '纵向' : '横向';
-  elements.paperSummaryTag.textContent = `${sizeName} ${orientName} (${state.pageCount}页)`;
-
-  const totalWordsPerPage = state.cols * state.rows;
-  elements.gridSummaryTag.textContent = `${state.cols} 列 × ${state.rows} 行 (${totalWordsPerPage} 字/页)`;
+  const totalWordsPerPage = appState.cols * appState.rows * appState.columnsCount;
+  dom.tagWords.textContent = `${totalWordsPerPage} 字 / 页 (共 ${totalWordsPerPage * appState.pageCount} 字)`;
 }
 
 /**
  * 缩放管理
  */
-function setZoom(val) {
-  zoom = Math.max(0.3, Math.min(2.5, val));
-  elements.zoomLevelText.textContent = `${Math.round(zoom * 100)}%`;
-  elements.paperContainer.style.transform = `scale(${zoom})`;
+function updateZoom(newZoom) {
+  zoomScale = Math.max(0.3, Math.min(2.5, newZoom));
+  dom.zoomVal.textContent = `${Math.round(zoomScale * 100)}%`;
+  dom.paperSheet.style.transform = `scale(${zoomScale})`;
 }
 
-function fitZoomToViewport() {
-  const viewport = elements.canvasViewport;
+function fitZoom() {
+  const spec = PAPER_SPECS[appState.paperSize] || PAPER_SPECS.a4;
+  const isLandscape = appState.paperOrientation === 'l';
+  const paperW = isLandscape ? spec.h : spec.w;
+  const paperH = isLandscape ? spec.w : spec.h;
+
+  const viewport = dom.paperViewport;
   const padding = 60;
   const availW = viewport.clientWidth - padding;
   const availH = viewport.clientHeight - padding;
 
-  const baseSize = PAPER_SIZES[state.paperSize] || PAPER_SIZES.a4;
-  const isLandscape = state.paperOrientation === 'l';
-  const paperW = isLandscape ? baseSize.h : baseSize.w;
-  const paperH = isLandscape ? baseSize.w : baseSize.h;
+  const pxW = paperW * 3.78;
+  const pxH = paperH * 3.78;
 
-  // 屏幕显示像素基准（假定 1mm ≈ 3.78px）
-  const displayW = paperW * 3.78;
-  const displayH = paperH * 3.78;
-
-  const scaleW = availW / displayW;
-  const scaleH = availH / displayH;
-  const bestZoom = Math.min(scaleW, scaleH, 1.2);
-
-  setZoom(Math.max(0.4, bestZoom));
+  const scale = Math.min(availW / pxW, availH / pxH, 1.25);
+  updateZoom(Math.max(0.35, scale));
 }
 
 /**
- * 计算网格几何布局参数（单位：毫米 mm）
+ * 核心数学排版布局计算（单位：毫米 mm）
  */
-function calculateLayout(pageIndex = 0) {
-  const baseSize = PAPER_SIZES[state.paperSize] || PAPER_SIZES.a4;
-  const isLandscape = state.paperOrientation === 'l';
-  const paperWidth = isLandscape ? baseSize.h : baseSize.w;
-  const paperHeight = isLandscape ? baseSize.w : baseSize.h;
+function computeLayout(pageIndex = 0) {
+  const spec = PAPER_SPECS[appState.paperSize] || PAPER_SPECS.a4;
+  const isLandscape = appState.paperOrientation === 'l';
+  const paperWidth = isLandscape ? spec.h : spec.w;
+  const paperHeight = isLandscape ? spec.w : spec.h;
 
-  const margin = state.pageMargin;
-  const availableWidth = paperWidth - 2 * margin;
+  const { marginTop, marginRight, marginBottom, marginLeft, columnsCount, cols, rows, gapRatio } = appState;
 
-  // 顶部可能的信息栏高度
+  // 顶部考务栏高度
   let headerHeight = 0;
-  if (state.showHeaderInfo && pageIndex === 0) {
-    headerHeight += 12; // 考号姓名栏
-  }
-  if (state.showTitleLine && pageIndex === 0) {
-    headerHeight += 14; // 作文题目行
-  }
+  if (appState.showHeaderInfo && pageIndex === 0) headerHeight += 12;
+  if (appState.showTitleLine && pageIndex === 0) headerHeight += 14;
 
-  const availableHeight = paperHeight - 2 * margin - headerHeight;
+  const contentTop = marginTop + headerHeight;
+  const contentHeight = paperHeight - contentTop - marginBottom;
+  const totalContentWidth = paperWidth - marginLeft - marginRight;
 
-  // 方格宽度
-  const cellWidth = availableWidth / state.cols;
+  // 双栏间距（试卷中缝间距）
+  const columnGap = columnsCount > 1 ? 16 : 0;
+  const columnWidth = (totalContentWidth - (columnsCount - 1) * columnGap) / columnsCount;
 
-  // 每一个行单元由主格 + 行间槽组成
-  // cellHeight + gapHeight = rowUnitHeight
-  // gapHeight = cellHeight * gapRatio
-  // rowUnitHeight = cellHeight * (1 + gapRatio)
-  // 为保持方格接近正方形，优先使用 cellWidth，如果超出页面则自动压缩
+  // 每个字符方格宽度
+  const cellWidth = columnWidth / cols;
+
+  // 方格高与行间槽高
   let cellHeight = cellWidth;
-  let gapHeight = cellHeight * state.gapRatio;
-  let totalGridHeight = state.rows * cellHeight + state.rows * gapHeight;
+  let gapHeight = cellHeight * gapRatio;
+  let totalGridHeight = rows * cellHeight + rows * gapHeight;
 
-  if (totalGridHeight > availableHeight) {
-    // 纵向放不下时，自适应收缩
-    const rowUnitHeight = availableHeight / state.rows;
-    cellHeight = rowUnitHeight / (1 + state.gapRatio);
-    gapHeight = cellHeight * state.gapRatio;
-    totalGridHeight = availableHeight;
+  // 纵向溢出保护：若超过页面可用高度则自适应等比压缩
+  if (totalGridHeight > contentHeight) {
+    const rowUnit = contentHeight / rows;
+    cellHeight = rowUnit / (1 + gapRatio);
+    gapHeight = cellHeight * gapRatio;
+    totalGridHeight = contentHeight;
   }
 
-  const gridLeft = margin;
-  const gridTop = margin + headerHeight + (availableHeight - totalGridHeight) / 2;
-  const gridWidth = availableWidth;
+  // 纵向垂直居中
+  const gridTop = contentTop + (contentHeight - totalGridHeight) / 2;
+
+  // 计算每栏的具体矩形区域
+  const columns = [];
+  for (let c = 0; c < columnsCount; c++) {
+    const colLeft = marginLeft + c * (columnWidth + columnGap);
+    columns.push({
+      colIndex: c,
+      left: colLeft,
+      top: gridTop,
+      width: columnWidth,
+      height: totalGridHeight,
+    });
+  }
 
   return {
     paperWidth,
     paperHeight,
-    margin,
+    marginTop,
+    marginRight,
+    marginBottom,
+    marginLeft,
     headerHeight,
-    gridLeft,
-    gridTop,
-    gridWidth,
-    gridHeight: totalGridHeight,
+    columnGap,
+    columns,
     cellWidth,
     cellHeight,
     gapHeight,
+    totalGridHeight,
   };
 }
 
 /**
- * 在 Canvas 上实时渲染预览纸张（第 1 页）
+ * 实时在 Canvas 上绘制第 1 页高精度预览
  */
 function renderPreview() {
-  const layout = calculateLayout(0);
-  const canvas = elements.previewCanvas;
+  const layout = computeLayout(0);
+  const canvas = dom.mainCanvas;
   const ctx = canvas.getContext('2d');
 
-  // 高清 Retina 屏幕比例
   const dpr = window.devicePixelRatio || 2;
   const mmToPx = 3.779528; // 96 DPI 下 1mm ≈ 3.78px
 
@@ -442,39 +557,48 @@ function renderPreview() {
   ctx.save();
   ctx.scale(dpr * mmToPx, dpr * mmToPx);
 
-  // 纸张底色（模拟优质书写纸）
-  ctx.fillStyle = '#ffffff';
+  // 纸张底色
+  ctx.fillStyle = appState.bgColor;
   ctx.fillRect(0, 0, layout.paperWidth, layout.paperHeight);
 
-  // 绘制考务栏/标题栏
-  if (state.showHeaderInfo) {
-    drawHeaderInfo(ctx, layout);
-  }
-  if (state.showTitleLine) {
-    drawTitleLine(ctx, layout);
+  // 绘制考生信息栏 & 标题行
+  if (appState.showHeaderInfo) drawHeaderInfo(ctx, layout);
+  if (appState.showTitleLine) drawTitleLine(ctx, layout);
+
+  // 绘制网格主体（支持单栏与双栏）
+  layout.columns.forEach((col, colIdx) => {
+    drawColumnGrid(ctx, layout, col, 0, colIdx);
+  });
+
+  // 绘制双栏中缝虚线（试卷折线）
+  if (appState.columnsCount === 2) {
+    drawFoldLine(ctx, layout);
   }
 
-  // 绘制网格主体
-  drawGrid(ctx, layout, 0);
+  // 绘制页脚页码
+  if (appState.showPageNumber) {
+    drawPageNumber(ctx, layout, 0);
+  }
 
   ctx.restore();
 }
 
 /**
- * 绘制顶部考生信息栏
+ * 绘制顶部考务信息
  */
 function drawHeaderInfo(ctx, layout) {
   ctx.save();
-  ctx.fillStyle = state.color;
-  ctx.font = '3.2px -apple-system, sans-serif';
+  ctx.fillStyle = appState.lineColor;
+  ctx.font = '3.3px -apple-system, sans-serif';
   ctx.textBaseline = 'middle';
 
-  const y = layout.margin + 4;
+  const y = layout.marginTop + 4;
+  const availableWidth = layout.paperWidth - layout.marginLeft - layout.marginRight;
   const items = ['姓名：__________', '班级：__________', '准考证号：________________'];
-  const colSpacing = layout.gridWidth / 3;
+  const spacing = availableWidth / 3;
 
   items.forEach((text, i) => {
-    ctx.fillText(text, layout.gridLeft + i * colSpacing, y);
+    ctx.fillText(text, layout.marginLeft + i * spacing, y);
   });
   ctx.restore();
 }
@@ -484,155 +608,183 @@ function drawHeaderInfo(ctx, layout) {
  */
 function drawTitleLine(ctx, layout) {
   ctx.save();
-  ctx.fillStyle = state.color;
-  ctx.font = '3.5px -apple-system, sans-serif';
+  ctx.fillStyle = appState.lineColor;
+  ctx.font = '3.6px -apple-system, sans-serif';
   ctx.textBaseline = 'middle';
 
-  const y = layout.margin + (state.showHeaderInfo ? 14 : 4);
-  ctx.fillText('题目：', layout.gridLeft, y);
+  const y = layout.marginTop + (appState.showHeaderInfo ? 14 : 4);
+  ctx.fillText('题目：', layout.marginLeft, y);
 
-  // 下划线
-  ctx.strokeStyle = state.color;
-  ctx.lineWidth = state.innerLineWidth;
+  ctx.strokeStyle = appState.lineColor;
+  ctx.lineWidth = appState.innerLineWidth;
   ctx.beginPath();
-  ctx.moveTo(layout.gridLeft + 12, y + 2.5);
-  ctx.lineTo(layout.gridLeft + layout.gridWidth, y + 2.5);
+  ctx.moveTo(layout.marginLeft + 12, y + 2.5);
+  ctx.lineTo(layout.paperWidth - layout.marginRight, y + 2.5);
   ctx.stroke();
 
   ctx.restore();
 }
 
 /**
- * 绘制主网格与字数标记
+ * 绘制单栏网格
  */
-function drawGrid(ctx, layout, pageIndex = 0) {
-  const { gridLeft, gridTop, gridWidth, cols, rows, cellWidth, cellHeight, gapHeight } = {
-    ...layout,
-    cols: state.cols,
-    rows: state.rows,
-  };
+function drawColumnGrid(ctx, layout, col, pageIndex, colIndex) {
+  const { cols, rows, outerLineWidth, innerLineWidth, splitVerticalLines, showWordCount, gridHelperLine } = appState;
+  const { cellWidth, cellHeight, gapHeight } = layout;
+  const { left, top, width, height } = col;
 
   ctx.save();
-  ctx.strokeStyle = state.color;
+  ctx.strokeStyle = appState.lineColor;
 
-  // 1. 绘制网格线与行槽
+  // 1. 横线系统
   for (let r = 0; r < rows; r++) {
-    const rowTop = gridTop + r * (cellHeight + gapHeight);
+    const rowTop = top + r * (cellHeight + gapHeight);
     const rowBottom = rowTop + cellHeight;
     const gapBottom = rowBottom + gapHeight;
 
-    // 主方格顶部横线
-    ctx.lineWidth = r === 0 ? state.outerLineWidth : state.innerLineWidth;
+    // 主方格顶部线
+    ctx.lineWidth = r === 0 ? outerLineWidth : innerLineWidth;
     ctx.beginPath();
-    ctx.moveTo(gridLeft, rowTop);
-    ctx.lineTo(gridLeft + gridWidth, rowTop);
+    ctx.moveTo(left, rowTop);
+    ctx.lineTo(left + width, rowTop);
     ctx.stroke();
 
+    // 格内辅助线（田字格 / 米字格）
+    if (gridHelperLine !== 'none') {
+      drawHelperLines(ctx, left, rowTop, cols, cellWidth, cellHeight, gridHelperLine);
+    }
+
     // 主方格底部横线
-    ctx.lineWidth = state.innerLineWidth;
+    ctx.lineWidth = innerLineWidth;
     ctx.beginPath();
-    ctx.moveTo(gridLeft, rowBottom);
-    ctx.lineTo(gridLeft + gridWidth, rowBottom);
+    ctx.moveTo(left, rowBottom);
+    ctx.lineTo(left + width, rowBottom);
     ctx.stroke();
 
     // 行间槽底部横线
-    ctx.lineWidth = r === rows - 1 ? state.outerLineWidth : state.innerLineWidth;
+    ctx.lineWidth = r === rows - 1 ? outerLineWidth : innerLineWidth;
     ctx.beginPath();
-    ctx.moveTo(gridLeft, gapBottom);
-    ctx.lineTo(gridLeft + gridWidth, gapBottom);
+    ctx.moveTo(left, gapBottom);
+    ctx.lineTo(left + width, gapBottom);
     ctx.stroke();
 
-    // 内部垂直坚线
-    ctx.lineWidth = state.innerLineWidth;
+    // 内部坚线
+    ctx.lineWidth = innerLineWidth;
     for (let c = 1; c < cols; c++) {
-      const x = gridLeft + c * cellWidth;
+      const x = left + c * cellWidth;
       ctx.beginPath();
       ctx.moveTo(x, rowTop);
-      // 是否穿透行间槽
-      ctx.lineTo(x, state.splitVerticalLines ? gapBottom : rowBottom);
+      ctx.lineTo(x, splitVerticalLines ? gapBottom : rowBottom);
       ctx.stroke();
     }
 
-    // 2. 字数统计标记（印在行间槽内）
-    if (state.showWordCount && gapHeight > 0.8) {
-      drawRowWordCount(ctx, layout, r, rowBottom, gapHeight, pageIndex);
+    // 2. 字数统计提示
+    if (showWordCount && gapHeight > 0.8) {
+      drawSlotWordCount(ctx, layout, col, r, rowBottom, gapHeight, pageIndex, colIndex);
     }
   }
 
-  // 3. 最左与最右的外边框
-  ctx.lineWidth = state.outerLineWidth;
+  // 3. 左右外边框
+  ctx.lineWidth = outerLineWidth;
   ctx.beginPath();
-  ctx.moveTo(gridLeft, gridTop);
-  ctx.lineTo(gridLeft, gridTop + layout.gridHeight);
+  ctx.moveTo(left, top);
+  ctx.lineTo(left, top + height);
   ctx.stroke();
 
   ctx.beginPath();
-  ctx.moveTo(gridLeft + gridWidth, gridTop);
-  ctx.lineTo(gridLeft + gridWidth, gridTop + layout.gridHeight);
+  ctx.moveTo(left + width, top);
+  ctx.lineTo(left + width, top + height);
   ctx.stroke();
 
   ctx.restore();
 }
 
 /**
- * 绘制字数标记（支持原图错开分布与行末分布）
+ * 绘制田字格或米字格内部虚线
  */
-function drawRowWordCount(ctx, layout, rowIndex, slotTop, slotHeight, pageIndex) {
-  const wordsPerRow = state.cols;
-  const currentTotalWords = pageIndex * (state.cols * state.rows) + (rowIndex + 1) * wordsPerRow;
+function drawHelperLines(ctx, rowLeft, rowTop, cols, cellW, cellH, type) {
+  ctx.save();
+  ctx.lineWidth = appState.innerLineWidth * 0.7;
+  ctx.strokeStyle = appState.lineColor;
+  ctx.setLineDash([0.8, 0.8]);
 
-  let shouldShow = false;
-  let wordNum = currentTotalWords;
+  for (let c = 0; c < cols; c++) {
+    const x = rowLeft + c * cellW;
+    const midX = x + cellW / 2;
+    const midY = rowTop + cellH / 2;
 
-  if (state.countStep === '100') {
-    if (currentTotalWords % 100 === 0) shouldShow = true;
-  } else if (state.countStep === '50') {
-    if (currentTotalWords % 50 === 0) shouldShow = true;
-  } else if (state.countStep === '200') {
-    if (currentTotalWords % 200 === 0) shouldShow = true;
-  } else if (state.countStep === 'row') {
-    shouldShow = true;
+    // 十字水平虚线
+    ctx.beginPath();
+    ctx.moveTo(x, midY);
+    ctx.lineTo(x + cellW, midY);
+    ctx.stroke();
+
+    // 十字垂直虚线
+    ctx.beginPath();
+    ctx.moveTo(midX, rowTop);
+    ctx.lineTo(midX, rowTop + cellH);
+    ctx.stroke();
+
+    if (type === 'mi') {
+      // 对角斜虚线
+      ctx.beginPath();
+      ctx.moveTo(x, rowTop);
+      ctx.lineTo(x + cellW, rowTop + cellH);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(x + cellW, rowTop);
+      ctx.lineTo(x, rowTop + cellH);
+      ctx.stroke();
+    }
   }
 
-  if (!shouldShow) return;
+  ctx.restore();
+}
+
+/**
+ * 绘制行间槽字数标记
+ */
+function drawSlotWordCount(ctx, layout, col, rowIndex, slotTop, slotHeight, pageIndex, colIndex) {
+  const { cols, rows, columnsCount, countStep, countPosition } = appState;
+  const wordsPerColumn = cols * rows;
+  const accumulatedWordsBefore = pageIndex * (wordsPerColumn * columnsCount) + colIndex * wordsPerColumn;
+  const currentTotalWords = accumulatedWordsBefore + (rowIndex + 1) * cols;
+
+  let show = false;
+  if (countStep === '100' && currentTotalWords % 100 === 0) show = true;
+  if (countStep === '50' && currentTotalWords % 50 === 0) show = true;
+  if (countStep === '200' && currentTotalWords % 200 === 0) show = true;
+  if (countStep === 'row') show = true;
+
+  if (!show) return;
 
   ctx.save();
-  ctx.fillStyle = state.color;
-  // 字体高度略小于槽高，字迹清晰且精细
+  ctx.fillStyle = appState.lineColor;
   const fontSize = Math.min(slotHeight * 0.75, 2.6);
   ctx.font = `${fontSize}px "Segoe UI", Arial, sans-serif`;
   ctx.textBaseline = 'middle';
 
-  const textStr = `${wordNum}`;
-  const textMetrics = ctx.measureText(textStr);
-  const textWidth = textMetrics.width;
-
+  const textStr = `${currentTotalWords}`;
+  const textW = ctx.measureText(textStr).width;
   const centerY = slotTop + slotHeight / 2;
-  let targetX = 0;
 
-  if (state.countPosition === 'staggered') {
-    // 原图经典错开分布：
-    // 5行(100) -> 约第5-6格 (1/4)
-    // 10行(200) -> 约第10-11格 (1/2 居中)
-    // 15行(300) -> 约第15-16格 (3/4)
-    // 20行(400) -> 最左侧第1格
-    const stage = Math.floor(wordNum / 100) % 4;
+  let targetX = 0;
+  if (countPosition === 'staggered') {
+    const stage = Math.floor(currentTotalWords / 100) % 4;
     if (stage === 1) {
-      targetX = layout.gridLeft + layout.cellWidth * Math.round(state.cols * 0.28) - textWidth / 2;
+      targetX = col.left + layout.cellWidth * Math.round(cols * 0.28) - textW / 2;
     } else if (stage === 2) {
-      targetX = layout.gridLeft + layout.gridWidth / 2 - textWidth / 2;
+      targetX = col.left + col.width / 2 - textW / 2;
     } else if (stage === 3) {
-      targetX = layout.gridLeft + layout.cellWidth * Math.round(state.cols * 0.75) - textWidth / 2;
+      targetX = col.left + layout.cellWidth * Math.round(cols * 0.75) - textW / 2;
     } else {
-      // stage === 0 (如 400, 800)
-      targetX = layout.gridLeft + layout.cellWidth * 0.8 - textWidth / 2;
+      targetX = col.left + layout.cellWidth * 0.8 - textW / 2;
     }
-  } else if (state.countPosition === 'right') {
-    // 靠右对齐（行末下方）
-    targetX = layout.gridLeft + layout.gridWidth - textWidth - 1;
+  } else if (countPosition === 'right') {
+    targetX = col.left + col.width - textW - 1;
   } else {
-    // 居中
-    targetX = layout.gridLeft + layout.gridWidth / 2 - textWidth / 2;
+    targetX = col.left + col.width / 2 - textW / 2;
   }
 
   ctx.fillText(textStr, targetX, centerY);
@@ -640,140 +792,106 @@ function drawRowWordCount(ctx, layout, rowIndex, slotTop, slotHeight, pageIndex)
 }
 
 /**
- * 转换 HEX 颜色为 RGB 数组
+ * 试卷双栏折痕中缝
  */
-function hexToRgb(hex) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
-    : [44, 48, 56];
+function drawFoldLine(ctx, layout) {
+  const centerX = layout.paperWidth / 2;
+  ctx.save();
+  ctx.lineWidth = appState.innerLineWidth;
+  ctx.strokeStyle = appState.lineColor;
+  ctx.setLineDash([2, 3]);
+
+  ctx.beginPath();
+  ctx.moveTo(centerX, layout.marginTop);
+  ctx.lineTo(centerX, layout.paperHeight - layout.marginBottom);
+  ctx.stroke();
+
+  ctx.restore();
 }
 
 /**
- * 使用 jsPDF 生成并导出高精度矢量 PDF
+ * 绘制页脚页码
  */
-function generatePdf(triggerPrint = false) {
+function drawPageNumber(ctx, layout, pageIndex) {
+  ctx.save();
+  ctx.fillStyle = appState.lineColor;
+  ctx.font = '3.0px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+
+  const text = `- ${pageIndex + 1} -`;
+  ctx.fillText(text, layout.paperWidth / 2, layout.paperHeight - layout.marginBottom + 8);
+  ctx.restore();
+}
+
+/**
+ * 导出高精度矢量 PDF (jsPDF)
+ */
+function exportPdf(triggerPrint = false) {
   if (!window.jspdf || !window.jspdf.jsPDF) {
-    alert('正在加载 PDF 生成引擎，请稍候再试...');
+    alert('正在加载 PDF 生成引擎，请稍候...');
     return;
   }
 
   const { jsPDF } = window.jspdf;
-  const isLandscape = state.paperOrientation === 'l';
+  const isLandscape = appState.paperOrientation === 'l';
   const doc = new jsPDF({
     orientation: isLandscape ? 'landscape' : 'portrait',
     unit: 'mm',
-    format: state.paperSize,
+    format: appState.paperSize,
   });
 
-  const rgb = hexToRgb(state.color);
-  const totalPages = state.pageCount;
+  const rgb = hexToRgb(appState.lineColor);
+  const totalPages = appState.pageCount;
 
   for (let p = 0; p < totalPages; p++) {
-    if (p > 0) doc.addPage(state.paperSize, isLandscape ? 'landscape' : 'portrait');
+    if (p > 0) doc.addPage(appState.paperSize, isLandscape ? 'landscape' : 'portrait');
 
-    const layout = calculateLayout(p);
+    const layout = computeLayout(p);
 
-    // 绘制信息栏
-    if (state.showHeaderInfo && p === 0) {
+    // 绘制考生信息
+    if (appState.showHeaderInfo && p === 0) {
       doc.setFontSize(9);
       doc.setTextColor(rgb[0], rgb[1], rgb[2]);
-      const y = layout.margin + 4;
-      const colSpacing = layout.gridWidth / 3;
-      doc.text('姓名：__________', layout.gridLeft, y);
-      doc.text('班级：__________', layout.gridLeft + colSpacing, y);
-      doc.text('准考证号：________________', layout.gridLeft + 2 * colSpacing, y);
+      const y = layout.marginTop + 4;
+      const availableWidth = layout.paperWidth - layout.marginLeft - layout.marginRight;
+      const spacing = availableWidth / 3;
+      doc.text('姓名：__________', layout.marginLeft, y);
+      doc.text('班级：__________', layout.marginLeft + spacing, y);
+      doc.text('准考证号：________________', layout.marginLeft + 2 * spacing, y);
     }
 
-    // 绘制题目行
-    if (state.showTitleLine && p === 0) {
+    // 绘制作文题目
+    if (appState.showTitleLine && p === 0) {
       doc.setFontSize(10);
       doc.setTextColor(rgb[0], rgb[1], rgb[2]);
-      const y = layout.margin + (state.showHeaderInfo ? 14 : 4);
-      doc.text('题目：', layout.gridLeft, y);
+      const y = layout.marginTop + (appState.showHeaderInfo ? 14 : 4);
+      doc.text('题目：', layout.marginLeft, y);
       doc.setDrawColor(rgb[0], rgb[1], rgb[2]);
-      doc.setLineWidth(state.innerLineWidth);
-      doc.line(layout.gridLeft + 12, y + 1.5, layout.gridLeft + layout.gridWidth, y + 1.5);
+      doc.setLineWidth(appState.innerLineWidth);
+      doc.line(layout.marginLeft + 12, y + 1.5, layout.paperWidth - layout.marginRight, y + 1.5);
     }
 
-    // 绘制网格
-    const { gridLeft, gridTop, gridWidth, cellWidth, cellHeight, gapHeight } = layout;
-    const { cols, rows } = state;
+    // 绘制各栏网格
+    layout.columns.forEach((col, colIdx) => {
+      drawColumnPdf(doc, layout, col, p, colIdx, rgb);
+    });
 
-    doc.setDrawColor(rgb[0], rgb[1], rgb[2]);
-
-    for (let r = 0; r < rows; r++) {
-      const rowTop = gridTop + r * (cellHeight + gapHeight);
-      const rowBottom = rowTop + cellHeight;
-      const gapBottom = rowBottom + gapHeight;
-
-      // 主方格顶部横线
-      doc.setLineWidth(r === 0 ? state.outerLineWidth : state.innerLineWidth);
-      doc.line(gridLeft, rowTop, gridLeft + gridWidth, rowTop);
-
-      // 主方格底部横线
-      doc.setLineWidth(state.innerLineWidth);
-      doc.line(gridLeft, rowBottom, gridLeft + gridWidth, rowBottom);
-
-      // 行间槽底部横线
-      doc.setLineWidth(r === rows - 1 ? state.outerLineWidth : state.innerLineWidth);
-      doc.line(gridLeft, gapBottom, gridLeft + gridWidth, gapBottom);
-
-      // 内部垂直竖线
-      doc.setLineWidth(state.innerLineWidth);
-      for (let c = 1; c < cols; c++) {
-        const x = gridLeft + c * cellWidth;
-        doc.line(x, rowTop, x, state.splitVerticalLines ? gapBottom : rowBottom);
-      }
-
-      // 字数标记
-      if (state.showWordCount && gapHeight > 0.8) {
-        const wordsPerRow = cols;
-        const currentTotalWords = p * (cols * rows) + (r + 1) * wordsPerRow;
-
-        let shouldShow = false;
-        if (state.countStep === '100' && currentTotalWords % 100 === 0) shouldShow = true;
-        if (state.countStep === '50' && currentTotalWords % 50 === 0) shouldShow = true;
-        if (state.countStep === '200' && currentTotalWords % 200 === 0) shouldShow = true;
-        if (state.countStep === 'row') shouldShow = true;
-
-        if (shouldShow) {
-          doc.setTextColor(rgb[0], rgb[1], rgb[2]);
-          // 8pt ~ 2.8mm
-          const pdfFontSize = Math.max(5, Math.min(8, gapHeight * 2.8));
-          doc.setFontSize(pdfFontSize);
-
-          const textStr = `${currentTotalWords}`;
-          const textWidth = doc.getTextWidth(textStr);
-          const centerY = rowBottom + gapHeight * 0.72;
-
-          let targetX = 0;
-          if (state.countPosition === 'staggered') {
-            const stage = Math.floor(currentTotalWords / 100) % 4;
-            if (stage === 1) {
-              targetX = gridLeft + cellWidth * Math.round(cols * 0.28) - textWidth / 2;
-            } else if (stage === 2) {
-              targetX = gridLeft + gridWidth / 2 - textWidth / 2;
-            } else if (stage === 3) {
-              targetX = gridLeft + cellWidth * Math.round(cols * 0.75) - textWidth / 2;
-            } else {
-              targetX = gridLeft + cellWidth * 0.8 - textWidth / 2;
-            }
-          } else if (state.countPosition === 'right') {
-            targetX = gridLeft + gridWidth - textWidth - 1;
-          } else {
-            targetX = gridLeft + gridWidth / 2 - textWidth / 2;
-          }
-
-          doc.text(textStr, targetX, centerY);
-        }
-      }
+    // 试卷中缝折痕
+    if (appState.columnsCount === 2) {
+      doc.setDrawColor(rgb[0], rgb[1], rgb[2]);
+      doc.setLineWidth(appState.innerLineWidth);
+      doc.setLineDashPattern([2, 3], 0);
+      doc.line(layout.paperWidth / 2, layout.marginTop, layout.paperWidth / 2, layout.paperHeight - layout.marginBottom);
+      doc.setLineDashPattern([], 0);
     }
 
-    // 外框左右边线
-    doc.setLineWidth(state.outerLineWidth);
-    doc.line(gridLeft, gridTop, gridLeft, gridTop + layout.gridHeight);
-    doc.line(gridLeft + gridWidth, gridTop, gridLeft + gridWidth, gridTop + layout.gridHeight);
+    // 页码
+    if (appState.showPageNumber) {
+      doc.setFontSize(8);
+      doc.setTextColor(rgb[0], rgb[1], rgb[2]);
+      doc.text(`- ${p + 1} -`, layout.paperWidth / 2, layout.paperHeight - layout.marginBottom + 7, { align: 'center' });
+    }
   }
 
   if (triggerPrint) {
@@ -781,10 +899,198 @@ function generatePdf(triggerPrint = false) {
     const blob = doc.output('bloburl');
     window.open(blob);
   } else {
-    const filename = `作文稿纸_${state.cols}x${state.rows}_${state.pageCount}页.pdf`;
-    doc.save(filename);
+    doc.save(`作文稿纸_${appState.cols}x${appState.rows}_${totalPages}页.pdf`);
   }
 }
 
-// 页面加载完成后启动
-document.addEventListener('DOMContentLoaded', initApp);
+/**
+ * 绘制 PDF 单栏
+ */
+function drawColumnPdf(doc, layout, col, pageIndex, colIndex, rgb) {
+  const { cols, rows, outerLineWidth, innerLineWidth, splitVerticalLines, showWordCount, countStep, countPosition } = appState;
+  const { cellWidth, cellHeight, gapHeight } = layout;
+  const { left, top, width, height } = col;
+
+  doc.setDrawColor(rgb[0], rgb[1], rgb[2]);
+
+  for (let r = 0; r < rows; r++) {
+    const rowTop = top + r * (cellHeight + gapHeight);
+    const rowBottom = rowTop + cellHeight;
+    const gapBottom = rowBottom + gapHeight;
+
+    // 主格顶横线
+    doc.setLineWidth(r === 0 ? outerLineWidth : innerLineWidth);
+    doc.line(left, rowTop, left + width, rowTop);
+
+    // 主格底横线
+    doc.setLineWidth(innerLineWidth);
+    doc.line(left, rowBottom, left + width, rowBottom);
+
+    // 行间槽底横线
+    doc.setLineWidth(r === rows - 1 ? outerLineWidth : innerLineWidth);
+    doc.line(left, gapBottom, left + width, gapBottom);
+
+    // 竖线
+    doc.setLineWidth(innerLineWidth);
+    for (let c = 1; c < cols; c++) {
+      const x = left + c * cellWidth;
+      doc.line(x, rowTop, x, splitVerticalLines ? gapBottom : rowBottom);
+    }
+
+    // 字数标记
+    if (showWordCount && gapHeight > 0.8) {
+      const wordsPerColumn = cols * rows;
+      const accumulatedWordsBefore = pageIndex * (wordsPerColumn * appState.columnsCount) + colIndex * wordsPerColumn;
+      const currentTotalWords = accumulatedWordsBefore + (rowIndex = r + 1) * cols;
+
+      let show = false;
+      if (countStep === '100' && currentTotalWords % 100 === 0) show = true;
+      if (countStep === '50' && currentTotalWords % 50 === 0) show = true;
+      if (countStep === '200' && currentTotalWords % 200 === 0) show = true;
+      if (countStep === 'row') show = true;
+
+      if (show) {
+        doc.setTextColor(rgb[0], rgb[1], rgb[2]);
+        const pdfFontSize = Math.max(5, Math.min(8, gapHeight * 2.8));
+        doc.setFontSize(pdfFontSize);
+
+        const textStr = `${currentTotalWords}`;
+        const textW = doc.getTextWidth(textStr);
+        const centerY = rowBottom + gapHeight * 0.72;
+
+        let targetX = 0;
+        if (countPosition === 'staggered') {
+          const stage = Math.floor(currentTotalWords / 100) % 4;
+          if (stage === 1) {
+            targetX = left + cellWidth * Math.round(cols * 0.28) - textW / 2;
+          } else if (stage === 2) {
+            targetX = left + width / 2 - textW / 2;
+          } else if (stage === 3) {
+            targetX = left + cellWidth * Math.round(cols * 0.75) - textW / 2;
+          } else {
+            targetX = left + cellWidth * 0.8 - textW / 2;
+          }
+        } else if (countPosition === 'right') {
+          targetX = left + width - textW - 1;
+        } else {
+          targetX = left + width / 2 - textW / 2;
+        }
+
+        doc.text(textStr, targetX, centerY);
+      }
+    }
+  }
+
+  // 左右外边框
+  doc.setLineWidth(outerLineWidth);
+  doc.line(left, top, left, top + height);
+  doc.line(left + width, top, left + width, top + height);
+}
+
+/**
+ * 导出 SVG 矢量格式（支持在 Illustrator/Inkscape 无损打开）
+ */
+function exportSvg() {
+  const layout = computeLayout(0);
+  const { paperWidth, paperHeight } = layout;
+
+  let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${paperWidth}mm" height="${paperHeight}mm" viewBox="0 0 ${paperWidth} ${paperHeight}">\n`;
+  svgContent += `  <rect width="${paperWidth}" height="${paperHeight}" fill="${appState.bgColor}" />\n`;
+
+  // 渲染主体线条与文本
+  layout.columns.forEach((col, colIdx) => {
+    const { cols, rows, outerLineWidth, innerLineWidth, splitVerticalLines, showWordCount } = appState;
+    const { cellWidth, cellHeight, gapHeight } = layout;
+    const { left, top, width, height } = col;
+
+    // 左右边框
+    svgContent += `  <line x1="${left}" y1="${top}" x2="${left}" y2="${top + height}" stroke="${appState.lineColor}" stroke-width="${outerLineWidth}" />\n`;
+    svgContent += `  <line x1="${left + width}" y1="${top}" x2="${left + width}" y2="${top + height}" stroke="${appState.lineColor}" stroke-width="${outerLineWidth}" />\n`;
+
+    for (let r = 0; r < rows; r++) {
+      const rowTop = top + r * (cellHeight + gapHeight);
+      const rowBottom = rowTop + cellHeight;
+      const gapBottom = rowBottom + gapHeight;
+
+      const topLineW = r === 0 ? outerLineWidth : innerLineWidth;
+      svgContent += `  <line x1="${left}" y1="${rowTop}" x2="${left + width}" y2="${rowTop}" stroke="${appState.lineColor}" stroke-width="${topLineW}" />\n`;
+      svgContent += `  <line x1="${left}" y1="${rowBottom}" x2="${left + width}" y2="${rowBottom}" stroke="${appState.lineColor}" stroke-width="${innerLineWidth}" />\n`;
+
+      const botLineW = r === rows - 1 ? outerLineWidth : innerLineWidth;
+      svgContent += `  <line x1="${left}" y1="${gapBottom}" x2="${left + width}" y2="${gapBottom}" stroke="${appState.lineColor}" stroke-width="${botLineW}" />\n`;
+
+      // 竖线
+      for (let c = 1; c < cols; c++) {
+        const x = left + c * cellWidth;
+        const y2 = splitVerticalLines ? gapBottom : rowBottom;
+        svgContent += `  <line x1="${x}" y1="${rowTop}" x2="${x}" y2="${y2}" stroke="${appState.lineColor}" stroke-width="${innerLineWidth}" />\n`;
+      }
+    }
+  });
+
+  svgContent += `</svg>`;
+
+  const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `作文稿纸_${appState.cols}x${appState.rows}.svg`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * 导出超清 PNG
+ */
+function exportPng() {
+  const canvas = dom.mainCanvas;
+  const link = document.createElement('a');
+  link.download = `作文稿纸_${appState.cols}x${appState.rows}.png`;
+  link.href = canvas.toDataURL('image/png', 1.0);
+  link.click();
+}
+
+/**
+ * 备份配置为 JSON 文件
+ */
+function exportConfiguration() {
+  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(appState, null, 2));
+  const downloadAnchor = document.createElement('a');
+  downloadAnchor.setAttribute('href', dataStr);
+  downloadAnchor.setAttribute('download', `稿纸配置_${appState.cols}x${appState.rows}.json`);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  downloadAnchor.remove();
+}
+
+/**
+ * 从 JSON 恢复配置
+ */
+function importConfiguration(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const imported = JSON.parse(event.target.result);
+      appState = { ...appState, ...imported };
+      syncStateToForm();
+      renderPreview();
+      alert('配置方案导入成功！');
+    } catch (err) {
+      alert('配置文件格式错误，请检查 JSON 格式');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+    : [44, 48, 56];
+}
+
+// 启动
+document.addEventListener('DOMContentLoaded', init);
