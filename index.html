@@ -361,10 +361,11 @@
         </div>
       </div>
 
-      <!-- 纸张视图容器 -->
+      <!-- 纸张视图容器 (使用原生 SVG 矢量渲染，消除缩放摩尔纹与像素走样) -->
       <div class="paper-viewport" id="paperViewport">
         <div class="paper-sheet" id="paperSheet">
-          <canvas id="mainCanvas"></canvas>
+          <div id="svgContainer" class="svg-container"></div>
+          <canvas id="mainCanvas" style="display: none;"></canvas>
         </div>
       </div>
     </main>

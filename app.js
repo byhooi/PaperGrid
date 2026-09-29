@@ -546,54 +546,146 @@ function computeLayout(pageIndex = 0) {
 }
 
 /**
- * 实时在 Canvas 上绘制第 1 页高精度预览
+ * 实时在容器中生成并渲染第 1 页原生矢量 SVG (杜绝任何缩放下的像素走样与波浪感)
  */
 function renderPreview() {
   const layout = computeLayout(0);
-  const canvas = dom.mainCanvas;
-  const ctx = canvas.getContext('2d');
 
   // 更新尺寸信息横幅与状态标签
   updateInfoTags(layout);
 
-  const dpr = window.devicePixelRatio || 2;
-  const mmToPx = 3.779528; // 96 DPI 下 1mm ≈ 3.78px
+  const container = document.getElementById('svgContainer');
+  if (container) {
+    container.innerHTML = buildPageSvgString(layout, 0);
+  }
+}
 
-  const pxWidth = layout.paperWidth * mmToPx;
-  const pxHeight = layout.paperHeight * mmToPx;
+/**
+ * 构造单页完整矢量 SVG 字符串
+ */
+function buildPageSvgString(layout, pageIndex = 0) {
+  const { paperWidth, paperHeight } = layout;
+  const { outerLineWidth, innerLineWidth, lineColor, bgColor, showHeaderInfo, showTitleLine, showPageNumber, columnsCount, cols, rows, splitVerticalLines, showWordCount, gridHelperLine, countStep, countPosition } = appState;
+  const { cellWidth, cellHeight, gapHeight } = layout;
 
-  canvas.width = pxWidth * dpr;
-  canvas.height = pxHeight * dpr;
-  canvas.style.width = `${pxWidth}px`;
-  canvas.style.height = `${pxHeight}px`;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${paperWidth}mm" height="${paperHeight}mm" viewBox="0 0 ${paperWidth} ${paperHeight}" style="width:${paperWidth}mm; height:${paperHeight}mm; display:block; shape-rendering:geometricPrecision; text-rendering:geometricPrecision;">\n`;
 
-  ctx.save();
-  ctx.scale(dpr * mmToPx, dpr * mmToPx);
+  // 1. 纸张底色
+  svg += `  <rect width="${paperWidth}" height="${paperHeight}" fill="${bgColor}" />\n`;
 
-  // 纸张底色
-  ctx.fillStyle = appState.bgColor;
-  ctx.fillRect(0, 0, layout.paperWidth, layout.paperHeight);
+  // 2. 考生信息
+  if (showHeaderInfo && pageIndex === 0) {
+    const y = layout.marginTop + 4;
+    const availW = paperWidth - layout.marginLeft - layout.marginRight;
+    const spacing = availW / 3;
+    svg += `  <text x="${layout.marginLeft}" y="${y}" font-size="3.3" font-family="-apple-system, sans-serif" fill="${lineColor}" dominant-baseline="central">姓名：__________</text>\n`;
+    svg += `  <text x="${layout.marginLeft + spacing}" y="${y}" font-size="3.3" font-family="-apple-system, sans-serif" fill="${lineColor}" dominant-baseline="central">班级：__________</text>\n`;
+    svg += `  <text x="${layout.marginLeft + 2 * spacing}" y="${y}" font-size="3.3" font-family="-apple-system, sans-serif" fill="${lineColor}" dominant-baseline="central">学号：________________</text>\n`;
+  }
 
-  // 绘制学生信息栏 & 题目行
-  if (appState.showHeaderInfo) drawHeaderInfo(ctx, layout);
-  if (appState.showTitleLine) drawTitleLine(ctx, layout);
+  // 3. 题目行
+  if (showTitleLine && pageIndex === 0) {
+    const y = layout.marginTop + (showHeaderInfo ? 14 : 4);
+    svg += `  <text x="${layout.marginLeft}" y="${y}" font-size="3.6" font-family="-apple-system, sans-serif" fill="${lineColor}" dominant-baseline="central">题目：</text>\n`;
+    svg += `  <line x1="${layout.marginLeft + 12}" y1="${y + 2.5}" x2="${paperWidth - layout.marginRight}" y2="${y + 2.5}" stroke="${lineColor}" stroke-width="${innerLineWidth}" />\n`;
+  }
 
-  // 绘制网格主体
+  // 4. 网格绘制 (每栏)
   layout.columns.forEach((col, colIdx) => {
-    drawColumnGrid(ctx, layout, col, 0, colIdx);
+    const { left, top, width, height } = col;
+
+    // 左右外边框
+    svg += `  <line x1="${left}" y1="${top}" x2="${left}" y2="${top + height}" stroke="${lineColor}" stroke-width="${outerLineWidth}" />\n`;
+    svg += `  <line x1="${left + width}" y1="${top}" x2="${left + width}" y2="${top + height}" stroke="${lineColor}" stroke-width="${outerLineWidth}" />\n`;
+
+    for (let r = 0; r < rows; r++) {
+      const rowTop = top + r * (cellHeight + gapHeight);
+      const rowBottom = rowTop + cellHeight;
+      const gapBottom = rowBottom + gapHeight;
+
+      // 主方格顶部横线
+      const topW = r === 0 ? outerLineWidth : innerLineWidth;
+      svg += `  <line x1="${left}" y1="${rowTop}" x2="${left + width}" y2="${rowTop}" stroke="${lineColor}" stroke-width="${topW}" />\n`;
+
+      // 田字格/米字格辅助线
+      if (gridHelperLine !== 'none') {
+        for (let c = 0; c < cols; c++) {
+          const x = left + c * cellWidth;
+          const midX = x + cellWidth / 2;
+          const midY = rowTop + cellHeight / 2;
+          svg += `  <line x1="${x}" y1="${midY}" x2="${x + cellWidth}" y2="${midY}" stroke="${lineColor}" stroke-width="${innerLineWidth * 0.7}" stroke-dasharray="0.8,0.8" />\n`;
+          svg += `  <line x1="${midX}" y1="${rowTop}" x2="${midX}" y2="${rowTop + cellHeight}" stroke="${lineColor}" stroke-width="${innerLineWidth * 0.7}" stroke-dasharray="0.8,0.8" />\n`;
+          if (gridHelperLine === 'mi') {
+            svg += `  <line x1="${x}" y1="${rowTop}" x2="${x + cellWidth}" y2="${rowTop + cellHeight}" stroke="${lineColor}" stroke-width="${innerLineWidth * 0.7}" stroke-dasharray="0.8,0.8" />\n`;
+            svg += `  <line x1="${x + cellWidth}" y1="${rowTop}" x2="${x}" y2="${rowTop + cellHeight}" stroke="${lineColor}" stroke-width="${innerLineWidth * 0.7}" stroke-dasharray="0.8,0.8" />\n`;
+          }
+        }
+      }
+
+      // 主方格底部横线
+      svg += `  <line x1="${left}" y1="${rowBottom}" x2="${left + width}" y2="${rowBottom}" stroke="${lineColor}" stroke-width="${innerLineWidth}" />\n`;
+
+      // 行间槽底部横线
+      const botW = r === rows - 1 ? outerLineWidth : innerLineWidth;
+      svg += `  <line x1="${left}" y1="${gapBottom}" x2="${left + width}" y2="${gapBottom}" stroke="${lineColor}" stroke-width="${botW}" />\n`;
+
+      // 竖线
+      for (let c = 1; c < cols; c++) {
+        const x = left + c * cellWidth;
+        const y2 = splitVerticalLines ? gapBottom : rowBottom;
+        svg += `  <line x1="${x}" y1="${rowTop}" x2="${x}" y2="${y2}" stroke="${lineColor}" stroke-width="${innerLineWidth}" />\n`;
+      }
+
+      // 字数标记提示
+      if (showWordCount && gapHeight > 0.8) {
+        const wordsPerColumn = cols * rows;
+        const accumulated = pageIndex * (wordsPerColumn * columnsCount) + colIdx * wordsPerColumn;
+        const currentTotal = accumulated + (r + 1) * cols;
+
+        let show = false;
+        if (countStep === '100' && currentTotal % 100 === 0) show = true;
+        if (countStep === '50' && currentTotal % 50 === 0) show = true;
+        if (countStep === '200' && currentTotal % 200 === 0) show = true;
+        if (countStep === 'row') show = true;
+
+        if (show) {
+          const centerY = rowBottom + gapHeight / 2;
+          const fontSize = Math.min(gapHeight * 0.75, 2.8);
+          let targetX = left + width / 2;
+          let textAnchor = 'middle';
+
+          if (countPosition === 'staggered') {
+            const stepVal = parseInt(countStep) || 50;
+            const stage = Math.floor(currentTotal / stepVal) % 4;
+            if (stage === 1) targetX = left + cellWidth * Math.round(cols * 0.28);
+            else if (stage === 2) targetX = left + width / 2;
+            else if (stage === 3) targetX = left + cellWidth * Math.round(cols * 0.75);
+            else targetX = left + cellWidth * 0.8;
+          } else if (countPosition === 'right') {
+            targetX = left + width - 1.2;
+            textAnchor = 'end';
+          }
+
+          svg += `  <text x="${targetX}" y="${centerY}" font-size="${fontSize}" font-family="'Segoe UI', Arial, sans-serif" fill="${lineColor}" text-anchor="${textAnchor}" dominant-baseline="central">${currentTotal}</text>\n`;
+        }
+      }
+    }
   });
 
-  // 绘制双栏中缝虚线
-  if (appState.columnsCount === 2) {
-    drawFoldLine(ctx, layout);
+  // 5. 双栏中缝折线
+  if (columnsCount === 2) {
+    const midX = paperWidth / 2;
+    svg += `  <line x1="${midX}" y1="${layout.marginTop}" x2="${midX}" y2="${paperHeight - layout.marginBottom}" stroke="${lineColor}" stroke-width="${innerLineWidth}" stroke-dasharray="2,3" />\n`;
   }
 
-  // 绘制页脚页码
-  if (appState.showPageNumber) {
-    drawPageNumber(ctx, layout, 0);
+  // 6. 页脚页码
+  if (showPageNumber) {
+    const pageY = paperHeight - layout.marginBottom + 7;
+    svg += `  <text x="${paperWidth / 2}" y="${pageY}" font-size="3.0" font-family="-apple-system, sans-serif" fill="${lineColor}" text-anchor="middle" dominant-baseline="bottom">- ${pageIndex + 1} -</text>\n`;
   }
 
-  ctx.restore();
+  svg += `</svg>`;
+  return svg;
 }
 
 /**
@@ -1040,63 +1132,49 @@ function drawColumnPdf(doc, layout, col, pageIndex, colIndex, rgb) {
 }
 
 /**
- * 导出 SVG
+ * 导出 SVG 格式 (直接导出无损高精矢量文本)
  */
 function exportSvg() {
   const layout = computeLayout(0);
-  const { paperWidth, paperHeight } = layout;
-
-  let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${paperWidth}mm" height="${paperHeight}mm" viewBox="0 0 ${paperWidth} ${paperHeight}">\n`;
-  svgContent += `  <rect width="${paperWidth}" height="${paperHeight}" fill="${appState.bgColor}" />\n`;
-
-  layout.columns.forEach((col) => {
-    const { cols, rows, outerLineWidth, innerLineWidth, splitVerticalLines } = appState;
-    const { cellWidth, cellHeight, gapHeight } = layout;
-    const { left, top, width, height } = col;
-
-    svgContent += `  <line x1="${left}" y1="${top}" x2="${left}" y2="${top + height}" stroke="${appState.lineColor}" stroke-width="${outerLineWidth}" />\n`;
-    svgContent += `  <line x1="${left + width}" y1="${top}" x2="${left + width}" y2="${top + height}" stroke="${appState.lineColor}" stroke-width="${outerLineWidth}" />\n`;
-
-    for (let r = 0; r < rows; r++) {
-      const rowTop = top + r * (cellHeight + gapHeight);
-      const rowBottom = rowTop + cellHeight;
-      const gapBottom = rowBottom + gapHeight;
-
-      const topLineW = r === 0 ? outerLineWidth : innerLineWidth;
-      svgContent += `  <line x1="${left}" y1="${rowTop}" x2="${left + width}" y2="${rowTop}" stroke="${appState.lineColor}" stroke-width="${topLineW}" />\n`;
-      svgContent += `  <line x1="${left}" y1="${rowBottom}" x2="${left + width}" y2="${rowBottom}" stroke="${appState.lineColor}" stroke-width="${innerLineWidth}" />\n`;
-
-      const botLineW = r === rows - 1 ? outerLineWidth : innerLineWidth;
-      svgContent += `  <line x1="${left}" y1="${gapBottom}" x2="${left + width}" y2="${gapBottom}" stroke="${appState.lineColor}" stroke-width="${botLineW}" />\n`;
-
-      for (let c = 1; c < cols; c++) {
-        const x = left + c * cellWidth;
-        const y2 = splitVerticalLines ? gapBottom : rowBottom;
-        svgContent += `  <line x1="${x}" y1="${rowTop}" x2="${x}" y2="${y2}" stroke="${appState.lineColor}" stroke-width="${innerLineWidth}" />\n`;
-      }
-    }
-  });
-
-  svgContent += `</svg>`;
+  const svgContent = buildPageSvgString(layout, 0);
 
   const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `小学生作文纸_${appState.cols}x${appState.rows}.svg`;
+  a.download = `作文稿纸_${appState.cols}x${appState.rows}.svg`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
 /**
- * 导出超清 PNG
+ * 导出超清 PNG (基于高精度矢量渲染，彻底杜绝模糊和走样)
  */
 function exportPng() {
-  const canvas = dom.mainCanvas;
-  const link = document.createElement('a');
-  link.download = `小学生作文纸_${appState.cols}x${appState.rows}.png`;
-  link.href = canvas.toDataURL('image/png', 1.0);
-  link.click();
+  const layout = computeLayout(0);
+  const svgString = buildPageSvgString(layout, 0);
+
+  const img = new Image();
+  const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+
+  img.onload = () => {
+    const scaleFactor = 3; // 3倍超清
+    const mmToPx = 3.779528;
+    const canvas = document.createElement('canvas');
+    canvas.width = layout.paperWidth * mmToPx * scaleFactor;
+    canvas.height = layout.paperHeight * mmToPx * scaleFactor;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scaleFactor, scaleFactor);
+    ctx.drawImage(img, 0, 0, layout.paperWidth * mmToPx, layout.paperHeight * mmToPx);
+
+    const link = document.createElement('a');
+    link.download = `作文稿纸_${appState.cols}x${appState.rows}.png`;
+    link.href = canvas.toDataURL('image/png', 1.0);
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
 }
 
 /**

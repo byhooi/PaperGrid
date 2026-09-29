@@ -580,8 +580,19 @@ input[type="range"] {
   align-items: center;
 }
 
-#mainCanvas {
+.svg-container {
   display: block;
+  line-height: 0;
+}
+
+.svg-container svg {
+  display: block;
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
+}
+
+#mainCanvas {
+  display: none;
 }
 
 /* 响应式调整 */
