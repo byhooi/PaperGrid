@@ -353,6 +353,13 @@ input[type="range"] {
   color: #1d4ed8;
 }
 
+.slot-config-box {
+  background: #f8fafc;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  padding: 10px;
+}
+
 /* 复选框组件 */
 .checkbox-box label {
   display: flex;

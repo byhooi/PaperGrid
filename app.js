@@ -26,6 +26,8 @@ const PRESET_TEMPLATES = {
     marginLeft: 12,
     cols: 15,
     rows: 14,
+    enableGap: true,
+    gapHeightMm: 2.2,
     gapRatio: 0.18,
     fillVerticalHeight: true,
     gridHelperLine: 'none',
@@ -52,6 +54,8 @@ const PRESET_TEMPLATES = {
     marginLeft: 10,
     cols: 12,
     rows: 11,
+    enableGap: true,
+    gapHeightMm: 2.5,
     gapRatio: 0.18,
     fillVerticalHeight: true,
     gridHelperLine: 'none',
@@ -78,6 +82,8 @@ const PRESET_TEMPLATES = {
     marginLeft: 12,
     cols: 12,
     rows: 10,
+    enableGap: true,
+    gapHeightMm: 2.5,
     gapRatio: 0.20,
     fillVerticalHeight: true,
     gridHelperLine: 'tian',
@@ -104,6 +110,8 @@ const PRESET_TEMPLATES = {
     marginLeft: 14,
     cols: 20,
     rows: 20,
+    enableGap: true,
+    gapHeightMm: 1.8,
     gapRatio: 0.20,
     fillVerticalHeight: true,
     gridHelperLine: 'none',
@@ -130,6 +138,8 @@ const PRESET_TEMPLATES = {
     marginLeft: 14,
     cols: 20,
     rows: 20,
+    enableGap: true,
+    gapHeightMm: 1.8,
     gapRatio: 0.20,
     fillVerticalHeight: true,
     gridHelperLine: 'none',
@@ -156,6 +166,8 @@ const PRESET_TEMPLATES = {
     marginLeft: 14,
     cols: 25,
     rows: 20,
+    enableGap: true,
+    gapHeightMm: 1.5,
     gapRatio: 0.20,
     fillVerticalHeight: true,
     gridHelperLine: 'none',
@@ -190,8 +202,11 @@ const dom = {
   marginLeft: document.getElementById('marginLeft'),
   cols: document.getElementById('cols'),
   rows: document.getElementById('rows'),
+  enableGap: document.getElementById('enableGap'),
+  gapHeightMm: document.getElementById('gapHeightMm'),
   gapRatio: document.getElementById('gapRatio'),
   gapRatioVal: document.getElementById('gapRatioVal'),
+  gapConfigInputs: document.getElementById('gapConfigInputs'),
   fillVerticalHeight: document.getElementById('fillVerticalHeight'),
   cellSizeDisplay: document.getElementById('cellSizeDisplay'),
   gridHelperLine: document.getElementById('gridHelperLine'),
@@ -289,11 +304,35 @@ function bindEventListeners() {
     renderPreview();
   });
 
-  // 行间槽比例
+  // 行间槽启用切换
+  dom.enableGap.addEventListener('change', (e) => {
+    appState.enableGap = e.target.checked;
+    dom.gapConfigInputs.style.display = e.target.checked ? 'grid' : 'none';
+    renderPreview();
+  });
+
+  // 行间槽固定毫米数输入
+  dom.gapHeightMm.addEventListener('input', (e) => {
+    const mm = Math.max(0, parseFloat(e.target.value) || 0);
+    appState.gapHeightMm = mm;
+    const layout = computeLayout(0);
+    if (layout.cellHeight > 0) {
+      appState.gapRatio = Math.min(0.5, mm / layout.cellHeight);
+      dom.gapRatio.value = appState.gapRatio;
+      dom.gapRatioVal.textContent = `${Math.round(appState.gapRatio * 100)}%`;
+    }
+    renderPreview();
+  });
+
+  // 行间槽比例滑动条
   dom.gapRatio.addEventListener('input', (e) => {
     const ratio = parseFloat(e.target.value);
     appState.gapRatio = ratio;
     dom.gapRatioVal.textContent = `${Math.round(ratio * 100)}%`;
+    const layout = computeLayout(0);
+    const mm = layout.cellHeight * ratio;
+    appState.gapHeightMm = parseFloat(mm.toFixed(1));
+    dom.gapHeightMm.value = appState.gapHeightMm;
     renderPreview();
   });
 
@@ -402,6 +441,9 @@ function syncStateToForm() {
   dom.marginLeft.value = appState.marginLeft;
   dom.cols.value = appState.cols;
   dom.rows.value = appState.rows;
+  dom.enableGap.checked = appState.enableGap !== false;
+  dom.gapConfigInputs.style.display = (appState.enableGap !== false) ? 'grid' : 'none';
+  dom.gapHeightMm.value = appState.gapHeightMm || 2.2;
   dom.gapRatio.value = appState.gapRatio;
   dom.gapRatioVal.textContent = `${Math.round(appState.gapRatio * 100)}%`;
   dom.fillVerticalHeight.checked = appState.fillVerticalHeight;
@@ -479,35 +521,37 @@ function computeLayout(pageIndex = 0) {
   const columnGap = columnsCount > 1 ? 16 : 0;
   const columnWidth = (totalContentWidth - (columnsCount - 1) * columnGap) / columnsCount;
 
+  const effectiveGapRatio = (appState.enableGap !== false) ? gapRatio : 0;
+
   let cellWidth = columnWidth / cols;
   let cellHeight = cellWidth;
-  let gapHeight = cellHeight * gapRatio;
+  let gapHeight = cellHeight * effectiveGapRatio;
   let totalGridHeight = rows * (cellHeight + gapHeight);
 
   if (fillVerticalHeight) {
     // 💡 核心优化：纵向自动撑满页面，消除上下巨大留白，最大化小学生方格尺寸！
     // 允许根据页面纵横比动态拉大方格高度或等比放大整个网格
     const availableRowUnit = contentHeight / rows;
-    const maxCellHeight = availableRowUnit / (1 + gapRatio);
+    const maxCellHeight = availableRowUnit / (1 + effectiveGapRatio);
 
     // 如果方格按宽度算过小导致上下大面积留白，我们取纵向能容纳的最大高度，保持方正
     if (totalGridHeight < contentHeight) {
       // 适度放大方格高度与行槽，消除上下空虚
       cellHeight = maxCellHeight;
-      gapHeight = cellHeight * gapRatio;
+      gapHeight = (appState.enableGap !== false) ? cellHeight * effectiveGapRatio : 0;
       totalGridHeight = contentHeight;
     } else {
       // 纵向放不下时自适应收缩
       cellHeight = maxCellHeight;
-      gapHeight = cellHeight * gapRatio;
+      gapHeight = (appState.enableGap !== false) ? cellHeight * effectiveGapRatio : 0;
       totalGridHeight = contentHeight;
     }
   } else {
     // 若不开启撑满，当纵向超出时依然保护
     if (totalGridHeight > contentHeight) {
       const rowUnit = contentHeight / rows;
-      cellHeight = rowUnit / (1 + gapRatio);
-      gapHeight = cellHeight * gapRatio;
+      cellHeight = rowUnit / (1 + effectiveGapRatio);
+      gapHeight = (appState.enableGap !== false) ? cellHeight * effectiveGapRatio : 0;
       totalGridHeight = contentHeight;
     }
   }
@@ -623,11 +667,15 @@ function buildPageSvgString(layout, pageIndex = 0) {
       }
 
       // 主方格底部横线
-      svg += `  <line x1="${left}" y1="${rowBottom}" x2="${left + width}" y2="${rowBottom}" stroke="${lineColor}" stroke-width="${innerLineWidth}" />\n`;
+      const isLastRow = r === rows - 1;
+      const subBottomW = (gapHeight <= 0.05 && isLastRow) ? outerLineWidth : innerLineWidth;
+      svg += `  <line x1="${left}" y1="${rowBottom}" x2="${left + width}" y2="${rowBottom}" stroke="${lineColor}" stroke-width="${subBottomW}" />\n`;
 
-      // 行间槽底部横线
-      const botW = r === rows - 1 ? outerLineWidth : innerLineWidth;
-      svg += `  <line x1="${left}" y1="${gapBottom}" x2="${left + width}" y2="${gapBottom}" stroke="${lineColor}" stroke-width="${botW}" />\n`;
+      // 行间槽底部横线 (仅在有行间槽时绘制)
+      if (gapHeight > 0.05) {
+        const botW = isLastRow ? outerLineWidth : innerLineWidth;
+        svg += `  <line x1="${left}" y1="${gapBottom}" x2="${left + width}" y2="${gapBottom}" stroke="${lineColor}" stroke-width="${botW}" />\n`;
+      }
 
       // 竖线
       for (let c = 1; c < cols; c++) {
@@ -700,8 +748,10 @@ function updateInfoTags(layout) {
   const cellWStr = layout.cellWidth.toFixed(1);
   const cellHStr = layout.cellHeight.toFixed(1);
   const sizeText = `方格 ${cellWStr} × ${cellHStr} mm`;
-  dom.tagCellSize.textContent = sizeText;
-  dom.cellSizeDisplay.textContent = `约 ${cellWStr} mm × ${cellHStr} mm (行槽高 ${layout.gapHeight.toFixed(1)} mm)`;
+  const slotText = (appState.enableGap !== false && layout.gapHeight > 0.1) 
+    ? `(行槽高 ${layout.gapHeight.toFixed(1)} mm)` 
+    : `(无行间槽)`;
+  dom.cellSizeDisplay.textContent = `约 ${cellWStr} mm × ${cellHStr} mm ${slotText}`;
 
   const totalWordsPerPage = appState.cols * appState.rows * appState.columnsCount;
   dom.tagWords.textContent = `${totalWordsPerPage} 字 / 页 (共 ${totalWordsPerPage * appState.pageCount} 字)`;
@@ -1066,12 +1116,16 @@ function drawColumnPdf(doc, layout, col, pageIndex, colIndex, rgb) {
     }
 
     // 主格底横线
-    doc.setLineWidth(innerLineWidth);
+    const isLastRow = r === rows - 1;
+    const subBottomW = (gapHeight <= 0.05 && isLastRow) ? outerLineWidth : innerLineWidth;
+    doc.setLineWidth(subBottomW);
     doc.line(left, rowBottom, left + width, rowBottom);
 
-    // 行间槽底横线
-    doc.setLineWidth(r === rows - 1 ? outerLineWidth : innerLineWidth);
-    doc.line(left, gapBottom, left + width, gapBottom);
+    // 行间槽底横线 (仅在有行间槽时绘制)
+    if (gapHeight > 0.05) {
+      doc.setLineWidth(isLastRow ? outerLineWidth : innerLineWidth);
+      doc.line(left, gapBottom, left + width, gapBottom);
+    }
 
     // 竖线
     doc.setLineWidth(innerLineWidth);

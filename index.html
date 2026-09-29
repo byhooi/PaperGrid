@@ -75,8 +75,8 @@
             <div class="card-sub">12列 × 10行 · 田字虚线辅助</div>
           </button>
           <button type="button" class="preset-card" data-preset="sample-400">
-            <div class="card-name">📄 原图同款 (400字)</div>
-            <div class="card-sub">20列 × 20行 · 经典错开字数</div>
+            <div class="card-name">📄 小学生作文 (400字)</div>
+            <div class="card-sub">20列 × 20行 · 经典阶梯字数</div>
           </button>
           <button type="button" class="preset-card" data-preset="exam-800">
             <div class="card-name">🎓 中高考作文 (800字)</div>
@@ -134,7 +134,7 @@
       <div class="card-section">
         <div class="section-header">
           <span class="icon">📐</span>
-          <h3>网格行列与尺寸优化</h3>
+          <h3>网格行列与行间槽配置</h3>
         </div>
 
         <!-- 当前方格物理尺寸提示 -->
@@ -163,19 +163,34 @@
           </label>
         </div>
 
-        <div class="field-item">
-          <div class="label-with-val">
-            <label for="gapRatio">行间槽高度比例</label>
-            <span id="gapRatioVal">18%</span>
+        <!-- 行间留白槽独立配置区 -->
+        <div class="slot-config-box">
+          <div class="checkbox-box">
+            <label>
+              <input type="checkbox" id="enableGap" checked>
+              <span><strong>启用行间槽 (标点/修改留白)</strong></span>
+            </label>
           </div>
-          <input type="range" id="gapRatio" min="0" max="0.4" step="0.01" value="0.18">
-          <div class="helper-text">留出标点符号行、修改标注行（如原图所示）</div>
+
+          <div id="gapConfigInputs" class="field-grid grid-2" style="margin-top: 8px;">
+            <div class="field-item">
+              <label for="gapHeightMm">槽高固定值 (mm)</label>
+              <input type="number" id="gapHeightMm" value="2.2" min="0" max="15" step="0.1">
+            </div>
+            <div class="field-item">
+              <div class="label-with-val">
+                <label for="gapRatio">相对格高比例</label>
+                <span id="gapRatioVal">18%</span>
+              </div>
+              <input type="range" id="gapRatio" min="0" max="0.5" step="0.01" value="0.18">
+            </div>
+          </div>
         </div>
 
         <div class="field-item">
           <label for="gridHelperLine">格内辅助线</label>
           <select id="gridHelperLine">
-            <option value="none" selected>无辅助线 (纯方格，原图同款)</option>
+            <option value="none" selected>无辅助线 (纯方格)</option>
             <option value="tian">田字虚线格 (低年级写字推荐)</option>
             <option value="mi">米字虚线格 (书法笔画练习)</option>
           </select>
@@ -215,7 +230,7 @@
           <div class="field-item">
             <label for="countPosition">排版位置</label>
             <select id="countPosition">
-              <option value="staggered" selected>原图阶梯错开 (1/4, 1/2, 3/4, 1)</option>
+              <option value="staggered" selected>阶梯错开分布 (1/4, 1/2, 3/4, 1)</option>
               <option value="right">行末居右对齐</option>
               <option value="center">行槽中央居中</option>
             </select>
@@ -262,7 +277,7 @@
           <div class="color-picker-row">
             <input type="color" id="lineColorPicker" value="#2c3038" class="native-color-picker">
             <div class="preset-colors">
-              <span class="color-pill active" data-color="#2c3038" style="background:#2c3038" title="原图墨黑"></span>
+              <span class="color-pill active" data-color="#2c3038" style="background:#2c3038" title="经典墨黑"></span>
               <span class="color-pill" data-color="#b92b27" style="background:#b92b27" title="经典红"></span>
               <span class="color-pill" data-color="#1e7e34" style="background:#1e7e34" title="护眼绿"></span>
               <span class="color-pill" data-color="#1565c0" style="background:#1565c0" title="经典蓝"></span>
