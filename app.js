@@ -35,7 +35,6 @@ const PRESET_TEMPLATES = {
     splitVerticalLines: false,
     showWordCount: true,
     countStep: '100',
-    countPosition: 'staggered',
     lineColor: '#2c3038',
     bgColor: '#ffffff',
     outerLineWidth: 0.35,
@@ -64,7 +63,6 @@ const PRESET_TEMPLATES = {
     splitVerticalLines: false,
     showWordCount: true,
     countStep: '100',
-    countPosition: 'staggered',
     lineColor: '#2c3038',
     bgColor: '#ffffff',
     outerLineWidth: 0.35,
@@ -158,7 +156,6 @@ const dom = {
   splitVerticalLines: document.getElementById('splitVerticalLines'),
   showWordCount: document.getElementById('showWordCount'),
   countStep: document.getElementById('countStep'),
-  countPosition: document.getElementById('countPosition'),
   wordCountArea: document.getElementById('wordCountArea'),
 
   // 英语四线三格专属
@@ -353,7 +350,6 @@ function bindEventListeners() {
     'rows',
     'gridHelperLine',
     'countStep',
-    'countPosition',
     'outerLineWidth',
     'innerLineWidth',
     // 英语
@@ -444,7 +440,6 @@ function onFormChange() {
   appState.rows = parseInt(dom.rows.value) || 20;
   appState.gridHelperLine = dom.gridHelperLine.value;
   appState.countStep = dom.countStep.value;
-  appState.countPosition = dom.countPosition.value;
   appState.outerLineWidth = parseFloat(dom.outerLineWidth.value) || 0.35;
   appState.innerLineWidth = parseFloat(dom.innerLineWidth.value) || 0.15;
 
@@ -487,7 +482,6 @@ function syncStateToForm() {
   dom.splitVerticalLines.checked = appState.splitVerticalLines;
   dom.showWordCount.checked = appState.showWordCount;
   dom.countStep.value = appState.countStep;
-  dom.countPosition.value = appState.countPosition;
   dom.wordCountArea.style.display = appState.showWordCount ? 'grid' : 'none';
 
   // 英语
@@ -748,7 +742,7 @@ function buildPageSvgString(layout, pageIndex = 0) {
   // 4. 分纸张类型渲染主体
   if (type === 'composition') {
     // A. 作文纸 (方格)
-    const { cols, rows, splitVerticalLines, showWordCount, gridHelperLine, countStep, countPosition } = appState;
+    const { cols, rows, splitVerticalLines, showWordCount, gridHelperLine, countStep } = appState;
     const { cellWidth, cellHeight, gapHeight } = layout;
 
     layout.columns.forEach((col, colIdx) => {
@@ -800,37 +794,29 @@ function buildPageSvgString(layout, pageIndex = 0) {
           svg += `  <line x1="${x}" y1="${rowTop}" x2="${x}" y2="${y2}" stroke="${lineColor}" stroke-width="${innerLineWidth}" />\n`;
         }
 
-        // 字数标记提示
+        // 字数标记提示 (方案 A: 精准定位到具体字格下方)
         if (showWordCount && gapHeight > 0.8) {
           const wordsPerColumn = cols * rows;
           const accumulated = pageIndex * (wordsPerColumn * columnsCount) + colIdx * wordsPerColumn;
-          const currentTotal = accumulated + (r + 1) * cols;
+          const rowStartWords = accumulated + r * cols;
+          const rowEndWords = accumulated + (r + 1) * cols;
 
-          let show = false;
-          if (countStep === '100' && currentTotal % 100 === 0) show = true;
-          if (countStep === '50' && currentTotal % 50 === 0) show = true;
-          if (countStep === '200' && currentTotal % 200 === 0) show = true;
-          if (countStep === 'row') show = true;
+          const fontSize = Math.min(gapHeight * 0.75, 2.8);
+          const capHeight = fontSize * 0.71;
+          const baselineY = rowBottom + (gapHeight + capHeight) / 2;
 
-          if (show) {
-            const centerY = rowBottom + gapHeight / 2;
-            const fontSize = Math.min(gapHeight * 0.75, 2.8);
-            let targetX = left + width / 2;
-            let textAnchor = 'middle';
-
-            if (countPosition === 'staggered') {
-              const stepVal = parseInt(countStep) || 50;
-              const stage = Math.floor(currentTotal / stepVal) % 4;
-              if (stage === 1) targetX = left + cellWidth * Math.round(cols * 0.28);
-              else if (stage === 2) targetX = left + width / 2;
-              else if (stage === 3) targetX = left + cellWidth * Math.round(cols * 0.75);
-              else targetX = left + cellWidth * 0.8;
-            } else if (countPosition === 'right') {
-              targetX = left + width - 1.2;
-              textAnchor = 'end';
+          if (countStep === 'row') {
+            const targetWords = rowEndWords;
+            const targetX = left + width - 1.2;
+            svg += `  <text x="${targetX}" y="${baselineY}" font-size="${fontSize}" font-family="'Segoe UI', Arial, sans-serif" fill="${lineColor}" text-anchor="end">${targetWords}</text>\n`;
+          } else {
+            const step = parseInt(countStep) || 100;
+            const firstTarget = Math.ceil((rowStartWords + 1) / step) * step;
+            for (let targetWords = firstTarget; targetWords <= rowEndWords; targetWords += step) {
+              const c = (targetWords - rowStartWords) - 1;
+              const targetX = left + (c + 0.5) * cellWidth;
+              svg += `  <text x="${targetX}" y="${baselineY}" font-size="${fontSize}" font-family="'Segoe UI', Arial, sans-serif" fill="${lineColor}" text-anchor="middle">${targetWords}</text>\n`;
             }
-
-            svg += `  <text x="${targetX}" y="${centerY}" font-size="${fontSize}" font-family="'Segoe UI', Arial, sans-serif" fill="${lineColor}" text-anchor="${textAnchor}" dominant-baseline="central">${currentTotal}</text>\n`;
           }
         }
       }
@@ -1065,7 +1051,7 @@ function exportPdf(triggerPrint = false) {
  * 绘制 PDF 作文方格单栏
  */
 function drawColumnPdfComposition(doc, layout, col, pageIndex, colIndex, rgb) {
-  const { cols, rows, outerLineWidth, innerLineWidth, splitVerticalLines, showWordCount, countStep, countPosition, gridHelperLine } = appState;
+  const { cols, rows, outerLineWidth, innerLineWidth, splitVerticalLines, showWordCount, countStep, gridHelperLine } = appState;
   const { cellWidth, cellHeight, gapHeight } = layout;
   const { left, top, width, height } = col;
 
@@ -1117,42 +1103,34 @@ function drawColumnPdfComposition(doc, layout, col, pageIndex, colIndex, rgb) {
       doc.line(x, rowTop, x, splitVerticalLines ? gapBottom : rowBottom);
     }
 
-    // 字数标记
+    // 字数标记提示 (方案 A: 精准定位到具体字格下方)
     if (showWordCount && gapHeight > 0.8) {
       const wordsPerColumn = cols * rows;
       const accumulatedWordsBefore = pageIndex * (wordsPerColumn * appState.columnsCount) + colIndex * wordsPerColumn;
-      const currentTotalWords = accumulatedWordsBefore + (r + 1) * cols;
+      const rowStartWords = accumulatedWordsBefore + r * cols;
+      const rowEndWords = accumulatedWordsBefore + (r + 1) * cols;
 
-      let show = false;
-      if (countStep === '100' && currentTotalWords % 100 === 0) show = true;
-      if (countStep === '50' && currentTotalWords % 50 === 0) show = true;
-      if (countStep === '200' && currentTotalWords % 200 === 0) show = true;
-      if (countStep === 'row') show = true;
+      doc.setTextColor(rgb[0], rgb[1], rgb[2]);
+      const pdfFontSize = Math.max(5, Math.min(8.5, gapHeight * 2.8));
+      doc.setFontSize(pdfFontSize);
+      const capHeightMm = (pdfFontSize * 0.71) * (25.4 / 72);
+      const baselineY = rowBottom + (gapHeight + capHeightMm) / 2;
 
-      if (show) {
-        doc.setTextColor(rgb[0], rgb[1], rgb[2]);
-        const pdfFontSize = Math.max(5, Math.min(8.5, gapHeight * 2.8));
-        doc.setFontSize(pdfFontSize);
-
-        const textStr = `${currentTotalWords}`;
+      if (countStep === 'row') {
+        const textStr = `${rowEndWords}`;
         const textW = doc.getTextWidth(textStr);
-        const centerY = rowBottom + gapHeight * 0.72;
-
-        let targetX = 0;
-        if (countPosition === 'staggered') {
-          const stepVal = parseInt(countStep) || 50;
-          const stage = Math.floor(currentTotalWords / stepVal) % 4;
-          if (stage === 1) targetX = left + cellWidth * Math.round(cols * 0.28) - textW / 2;
-          else if (stage === 2) targetX = left + width / 2 - textW / 2;
-          else if (stage === 3) targetX = left + cellWidth * Math.round(cols * 0.75) - textW / 2;
-          else targetX = left + cellWidth * 0.8 - textW / 2;
-        } else if (countPosition === 'right') {
-          targetX = left + width - textW - 1;
-        } else {
-          targetX = left + width / 2 - textW / 2;
+        const targetX = left + width - textW - 1.0;
+        doc.text(textStr, targetX, baselineY);
+      } else {
+        const step = parseInt(countStep) || 100;
+        const firstTarget = Math.ceil((rowStartWords + 1) / step) * step;
+        for (let targetWords = firstTarget; targetWords <= rowEndWords; targetWords += step) {
+          const textStr = `${targetWords}`;
+          const textW = doc.getTextWidth(textStr);
+          const c = (targetWords - rowStartWords) - 1;
+          const targetX = left + (c + 0.5) * cellWidth - textW / 2;
+          doc.text(textStr, targetX, baselineY);
         }
-
-        doc.text(textStr, targetX, centerY);
       }
     }
   }
