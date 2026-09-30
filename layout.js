@@ -24,8 +24,9 @@
       const fixedGap = config.enableGap && config.gapMode === 'fixed' ? config.gapHeightMm : 0;
       const widthLimit = columnWidth / config.cols;
       const heightLimit = (contentHeight / config.rows - fixedGap) / (1 + ratio);
-      const cellWidth = config.fillVerticalHeight ? Math.min(widthLimit, heightLimit) : widthLimit;
-      const cellHeight = cellWidth;
+      const square = config.compositionFitMode === 'square';
+      const cellWidth = config.fillVerticalHeight && square ? Math.min(widthLimit, heightLimit) : widthLimit;
+      const cellHeight = config.fillVerticalHeight && !square ? heightLimit : cellWidth;
       const gapHeight = fixedGap + cellHeight * ratio;
       if (cellHeight < 1) throw new Error('方格边长不足 1 mm，请减少行列数、缩小槽高或边距。');
       contentWidth = config.cols * cellWidth;

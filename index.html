@@ -87,7 +87,7 @@
           </button>
           <button type="button" class="preset-card" data-preset="sample-400">
             <div class="card-name">📄 小学生作文 (400字)</div>
-            <div class="card-sub">20列 × 20行 · 比例行间槽</div>
+            <div class="card-sub">20列 × 20行 · 大格铺满</div>
           </button>
           <button type="button" class="preset-card" data-preset="english-four">
             <div class="card-name">🔤 英语四线三格</div>
@@ -187,10 +187,17 @@
           <div class="checkbox-box highlight-checkbox">
             <label>
               <input type="checkbox" id="fillVerticalHeight" checked aria-describedby="compositionSizingHint">
-              <span><strong>自动适配页面（保持正方格）</strong></span>
+              <span><strong>自动适配页面</strong></span>
             </label>
           </div>
-          <p class="helper-text" id="compositionSizingHint">保持行列数和槽高规则，使用能容纳的最大正方格，剩余空间居中留白。取消勾选后按栏宽确定格子尺寸，超高时提示，不自动缩小。</p>
+          <div class="field-item">
+            <label for="compositionFitMode">格子适配方式</label>
+            <select id="compositionFitMode" aria-describedby="compositionSizingHint">
+              <option value="fill">大格铺满（允许长方格）</option>
+              <option value="square">正方格适配（保持宽高相等）</option>
+            </select>
+          </div>
+          <p class="helper-text" id="compositionSizingHint">大格铺满：宽高分别利用可用空间，优先放大书写格，横版可能扁宽。正方格适配：保持宽高相等，剩余空间居中留白。两种模式都保留行列数与槽高规则。取消自动适配后按栏宽确定正方格尺寸，超高时提示，不自动缩小。</p>
           <div class="field-item" id="landscapeRecommendation" hidden>
             <button type="button" id="applyLandscapeLayout" class="sub-btn">应用横版推荐</button>
             <div class="helper-text">仅调整行列数并开启正方格适配，保持总字数及其他设置不变。</div>

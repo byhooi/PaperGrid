@@ -85,6 +85,7 @@
     element('gapRatio').disabled = !config.enableGap || config.gapMode !== 'ratio';
     element('gapRatioVal').textContent = `${Math.round(config.gapRatio * 100)}%`;
     element('wordCountArea').hidden = !config.showWordCount;
+    element('compositionFitMode').disabled = !config.fillVerticalHeight;
     element('linedSpacing').disabled = config.linedFillVertical;
     element('englishGroupHeightLabel').textContent = config.englishFillVertical ? '组高比例基准 (mm)' : '四线三格高度 (mm)';
     element('englishGapHeightLabel').textContent = config.englishFillVertical ? '间距比例基准 (mm)' : '组间距 (mm)';
@@ -297,7 +298,7 @@
       const recommendation = landscapeLayouts[state.cols * state.rows];
       if (!valid || busy || state.paperType !== 'composition' || state.paperOrientation !== 'l' || state.columnsCount !== 1 || !recommendation) return;
       try {
-        const candidate = grid.validateDocument(readForm({ ...recommendation, fillVerticalHeight: true }));
+        const candidate = grid.validateDocument(readForm({ ...recommendation, fillVerticalHeight: true, compositionFitMode: 'square' }));
         if (acceptConfiguration(candidate, true)) {
           notify(`已应用横版 ${recommendation.cols}列 × ${recommendation.rows}行，字数与其他设置保持不变。`);
         }

@@ -12,7 +12,7 @@
     paperType: 'composition', paperSize: 'a4', paperOrientation: 'p', columnsCount: 1, pageCount: 1,
     marginTop: 12, marginRight: 12, marginBottom: 12, marginLeft: 12,
     cols: 15, rows: 20, enableGap: true, gapMode: 'fixed', gapHeightMm: 2, gapRatio: 0.18,
-    fillVerticalHeight: true, gridHelperLine: 'none', splitVerticalLines: false, showWordCount: true, countStep: '100',
+    fillVerticalHeight: true, compositionFitMode: 'fill', gridHelperLine: 'none', splitVerticalLines: false, showWordCount: true, countStep: '100',
     englishGroupHeight: 9, englishGapHeight: 5, englishRows: 14, englishMidLineStyle: 'same',
     englishFillVertical: true, englishSlantedGuides: false,
     linedSpacing: 9.5, linedStyle: 'solid', linedRows: 25, linedFillVertical: true, linedMarginLine: false,
@@ -21,7 +21,7 @@
   };
   const presets = {
     'primary-300': { ...defaults },
-    'sample-400': { ...defaults, marginTop: 14, marginRight: 14, marginBottom: 14, marginLeft: 14, cols: 20, gapMode: 'ratio', gapHeightMm: 1.8, gapRatio: 0.3 },
+    'sample-400': { ...defaults, marginTop: 14, marginRight: 14, marginBottom: 14, marginLeft: 14, cols: 20, gapHeightMm: 1.8, gapRatio: 0.2 },
     'english-four': { ...defaults, paperType: 'english', marginTop: 15, marginRight: 15, marginBottom: 15, marginLeft: 15, innerLineWidth: 0.18 },
     'lined-paper': { ...defaults, paperType: 'lined', marginTop: 15, marginRight: 15, marginBottom: 15, marginLeft: 15, innerLineWidth: 0.18 },
   };
@@ -38,6 +38,7 @@
   };
   const enumRules = {
     paperType: ['composition', 'english', 'lined'], paperSize: Object.keys(paperSpecs),
+    compositionFitMode: ['fill', 'square'],
     paperOrientation: ['p', 'l'], gapMode: ['fixed', 'ratio'], gridHelperLine: ['none', 'tian', 'mi'],
     countStep: ['50', '100', '200', 'row'], englishMidLineStyle: ['same', 'red', 'solid'],
     linedStyle: ['solid', 'dashed', 'dotted'], pngDpi: [150, 300],

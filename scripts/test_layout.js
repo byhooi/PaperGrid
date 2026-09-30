@@ -16,14 +16,18 @@ const gapOptions = [
 let cases = 0;
 let rejected = 0;
 
-for (const preset of ['primary-300', 'sample-400', 'english-four', 'lined-paper']) {
+for (const [preset, compositionFitMode] of [
+  ['primary-300', 'fill'], ['primary-300', 'square'],
+  ['sample-400', 'fill'], ['sample-400', 'square'],
+  ['english-four', 'fill'], ['lined-paper', 'fill'],
+]) {
   for (const paperSize of Object.keys(grid.paperSpecs)) {
     for (const paperOrientation of ['p', 'l']) {
       for (const columnsCount of [1, 2]) {
         for (const header of [false, true]) {
           for (const gap of preset === 'primary-300' ? gapOptions : [{}]) {
             const config = {
-              ...grid.presets[preset], ...gap, paperSize, paperOrientation, columnsCount,
+              ...grid.presets[preset], ...gap, paperSize, paperOrientation, columnsCount, compositionFitMode,
               marginLeft: 13, marginRight: 21, marginBottom: 5, pageCount: 3,
               showHeaderInfo: header, showTitleLine: header, showPageNumber: true,
               gridHelperLine: 'mi', splitVerticalLines: true, englishSlantedGuides: true,
@@ -49,7 +53,11 @@ for (const preset of ['primary-300', 'sample-400', 'english-four', 'lined-paper'
                 assert.ok(column.width <= scene.columnWidth + 0.000001);
                 assert.ok(column.height <= scene.contentHeight + 0.000001);
                 if (config.paperType === 'composition') {
-                  close(scene.cellWidth, scene.cellHeight);
+                  if (compositionFitMode === 'square') close(scene.cellWidth, scene.cellHeight);
+                  else {
+                    close(column.width, scene.columnWidth);
+                    close(column.height, scene.contentHeight);
+                  }
                   close(column.width, config.cols * scene.cellWidth);
                   close(column.height, config.rows * (scene.cellHeight + scene.gapHeight));
                   const expectedGap = !config.enableGap ? 0 : config.gapMode === 'fixed' ? config.gapHeightMm : scene.cellHeight * config.gapRatio;
@@ -89,20 +97,22 @@ for (const preset of ['primary-300', 'sample-400', 'english-four', 'lined-paper'
   }
 }
 
-// 400 字竖版使用适中的比例槽高，不靠拉伸方格强行铺满。
+// 400 字默认大格铺满，保留窄行槽；正方格模式仍可主动选择。
 const sample400 = grid.presets['sample-400'];
 assert.equal(sample400.cols, 20);
 assert.equal(sample400.rows, 20);
-assert.equal(sample400.gapMode, 'ratio');
-close(sample400.gapRatio, 0.3);
+assert.equal(sample400.gapMode, 'fixed');
+assert.equal(sample400.compositionFitMode, 'fill');
+assert.equal(grid.presets['primary-300'].compositionFitMode, 'fill');
 const portrait400 = grid.computeLayout(sample400);
 close(portrait400.cellWidth, 9.1);
-close(portrait400.cellHeight, 9.1);
-close(portrait400.gapHeight, 2.73);
-close(portrait400.columns[0].top, 30.2);
-const fixed400 = grid.computeLayout({ ...sample400, gapMode: 'fixed' });
-close(fixed400.gapHeight, 1.8);
-assert.ok(portrait400.columns[0].top < fixed400.columns[0].top);
+close(portrait400.cellHeight, 11.65);
+close(portrait400.gapHeight, 1.8);
+close(portrait400.columns[0].top, 14);
+const square400 = grid.computeLayout({ ...sample400, compositionFitMode: 'square' });
+close(square400.cellWidth, square400.cellHeight);
+close(square400.gapHeight, 1.8);
+assert.ok(square400.columns[0].top > portrait400.columns[0].top);
 
 // 非适配模式保留原尺寸；方向切换不自动改行列数。
 for (const paperOrientation of ['p', 'l']) {
@@ -158,5 +168,12 @@ assert.equal(grid.parseConfiguration('{"gapRatio":0.3}').gapMode, 'ratio');
 for (const input of ['{"version":2,"config":{}}', '{"unknown":true}', '{"lineColor":"bad"}', '{"pageCount":-1}', '{']) {
   assert.throws(() => grid.parseConfiguration(input));
 }
-assert.equal(rejected, 2);
+assert.equal(grid.parseConfiguration('{"cols":20}').compositionFitMode, 'fill');
+for (const compositionFitMode of ['fill', 'square']) {
+  const config = { ...grid.defaults, compositionFitMode };
+  assert.deepEqual(grid.parseConfiguration(grid.serializeConfiguration(config)), config);
+}
+assert.throws(() => grid.validateConfig({ compositionFitMode: 'stretch' }));
+assert.throws(() => grid.validateConfig({ compositionFitMode: true }));
+assert.equal(rejected, 4);
 console.log(`布局回归通过：${cases} 种有效页面组合、${rejected} 种无法排版配置，以及固定尺寸、超高恢复、跨页字数和配置兼容检查。`);
