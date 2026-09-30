@@ -16,7 +16,7 @@ const gapOptions = [
 let cases = 0;
 let rejected = 0;
 
-for (const preset of ['primary-300', 'english-four', 'lined-paper']) {
+for (const preset of ['primary-300', 'sample-400', 'english-four', 'lined-paper']) {
   for (const paperSize of Object.keys(grid.paperSpecs)) {
     for (const paperOrientation of ['p', 'l']) {
       for (const columnsCount of [1, 2]) {
@@ -88,6 +88,21 @@ for (const preset of ['primary-300', 'english-four', 'lined-paper']) {
     }
   }
 }
+
+// 400 字竖版使用适中的比例槽高，不靠拉伸方格强行铺满。
+const sample400 = grid.presets['sample-400'];
+assert.equal(sample400.cols, 20);
+assert.equal(sample400.rows, 20);
+assert.equal(sample400.gapMode, 'ratio');
+close(sample400.gapRatio, 0.3);
+const portrait400 = grid.computeLayout(sample400);
+close(portrait400.cellWidth, 9.1);
+close(portrait400.cellHeight, 9.1);
+close(portrait400.gapHeight, 2.73);
+close(portrait400.columns[0].top, 30.2);
+const fixed400 = grid.computeLayout({ ...sample400, gapMode: 'fixed' });
+close(fixed400.gapHeight, 1.8);
+assert.ok(portrait400.columns[0].top < fixed400.columns[0].top);
 
 // 非适配模式保留原尺寸；方向切换不自动改行列数。
 for (const paperOrientation of ['p', 'l']) {

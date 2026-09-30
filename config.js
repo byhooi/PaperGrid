@@ -21,7 +21,7 @@
   };
   const presets = {
     'primary-300': { ...defaults },
-    'sample-400': { ...defaults, marginTop: 14, marginRight: 14, marginBottom: 14, marginLeft: 14, cols: 20, gapHeightMm: 1.8, gapRatio: 0.2 },
+    'sample-400': { ...defaults, marginTop: 14, marginRight: 14, marginBottom: 14, marginLeft: 14, cols: 20, gapMode: 'ratio', gapHeightMm: 1.8, gapRatio: 0.3 },
     'english-four': { ...defaults, paperType: 'english', marginTop: 15, marginRight: 15, marginBottom: 15, marginLeft: 15, innerLineWidth: 0.18 },
     'lined-paper': { ...defaults, paperType: 'lined', marginTop: 15, marginRight: 15, marginBottom: 15, marginLeft: 15, innerLineWidth: 0.18 },
   };
