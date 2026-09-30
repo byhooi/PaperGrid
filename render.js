@@ -91,7 +91,7 @@
       }
     });
     if (config.columnsCount === 2) {
-      const foldLeft = layout.columns[0].left + layout.columnWidth + layout.columnGap / 2;
+      const foldLeft = config.marginLeft + layout.columnWidth + layout.columnGap / 2;
       line(foldLeft, config.marginTop, foldLeft, layout.paperHeight - config.marginBottom - (config.showPageNumber ? 8 : 0), config.innerLineWidth, [2, 3]);
     }
     if (config.showPageNumber) text(`- ${pageIndex + 1} -`, layout.paperWidth / 2, layout.footerBaseline, 3, 'center');

@@ -17,14 +17,18 @@
     const layout = { paperWidth, paperHeight, contentTop, contentHeight, columnWidth, columnGap, columns: [], warnings: [], footerBaseline: paperHeight - config.marginBottom - 1.5 };
     if (contentHeight <= 0 || columnWidth <= 0) throw new Error('边距与页眉占用过多空间，请缩小边距。');
     let totalHeight;
+    let contentWidth = columnWidth;
 
     if (config.paperType === 'composition') {
       const ratio = config.enableGap && config.gapMode === 'ratio' ? config.gapRatio : 0;
       const fixedGap = config.enableGap && config.gapMode === 'fixed' ? config.gapHeightMm : 0;
-      const cellWidth = columnWidth / config.cols;
-      const cellHeight = config.fillVerticalHeight ? (contentHeight / config.rows - fixedGap) / (1 + ratio) : cellWidth;
+      const widthLimit = columnWidth / config.cols;
+      const heightLimit = (contentHeight / config.rows - fixedGap) / (1 + ratio);
+      const cellWidth = config.fillVerticalHeight ? Math.min(widthLimit, heightLimit) : widthLimit;
+      const cellHeight = cellWidth;
       const gapHeight = fixedGap + cellHeight * ratio;
-      if (cellHeight < 1) throw new Error('槽高或行数过大，方格高度不足 1 mm，请缩小槽高或减少行数。');
+      if (cellHeight < 1) throw new Error('方格边长不足 1 mm，请减少行列数、缩小槽高或边距。');
+      contentWidth = config.cols * cellWidth;
       totalHeight = config.rows * (cellHeight + gapHeight);
       Object.assign(layout, { cellWidth, cellHeight, gapHeight });
       if (config.showWordCount && gapHeight <= 0.8) layout.warnings.push('行间槽不足 0.8 mm，字数标记不显示。');
@@ -41,9 +45,22 @@
       layout.lined = { rows: config.linedRows, spacing };
       if (config.linedMarginLine && columnWidth <= 25) throw new Error('分栏宽度不足以容纳 25 mm 装订线，请减少边距或改为单栏。');
     }
-    if (totalHeight > contentHeight + 0.001) throw new Error(`内容需要 ${totalHeight.toFixed(1)} mm，可用高度只有 ${contentHeight.toFixed(1)} mm。请启用纵向自动铺满、减少行数或缩小间距。`);
+    if (totalHeight > contentHeight + 0.001) {
+      const english = config.paperType === 'english';
+      const rowHeight = english ? layout.english.groupHeight + layout.english.gapHeight : config.paperType === 'composition' ? layout.cellHeight + layout.gapHeight : layout.lined.spacing;
+      const trailingGap = english ? layout.english.gapHeight : 0;
+      const maximumRows = Math.floor((contentHeight + trailingGap + 0.001) / rowHeight);
+      const rowsKey = english ? 'englishRows' : config.paperType === 'composition' ? 'rows' : 'linedRows';
+      const minimumRows = grid.numericRules[rowsKey][0];
+      const unit = english ? '组' : '行';
+      const suggestion = maximumRows >= minimumRows
+        ? `保持当前尺寸时，请减少至 ${maximumRows} ${unit}以内，或缩小间距、边距。`
+        : `当前尺寸最多可放 ${maximumRows} ${unit}，不足最少 ${minimumRows} ${unit}；请缩小书写尺寸、间距、边距或换用更大的纸张。`;
+      const fitOption = config.paperType === 'composition' ? '自动适配页面' : '按行数铺满';
+      throw new Error(`内容需要 ${totalHeight.toFixed(1)} mm，可用高度只有 ${contentHeight.toFixed(1)} mm。${suggestion}也可开启“${fitOption}”，允许自动调整书写尺寸。`);
+    }
     for (let columnIndex = 0; columnIndex < config.columnsCount; columnIndex++) {
-      layout.columns.push({ left: config.marginLeft + columnIndex * (columnWidth + columnGap), top: contentTop + (contentHeight - totalHeight) / 2, width: columnWidth, height: totalHeight });
+      layout.columns.push({ left: config.marginLeft + columnIndex * (columnWidth + columnGap) + (columnWidth - contentWidth) / 2, top: contentTop + (contentHeight - totalHeight) / 2, width: contentWidth, height: totalHeight });
     }
     return layout;
   }

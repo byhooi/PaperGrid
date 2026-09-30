@@ -3,6 +3,7 @@
 
   const storageKey = 'papergrid.config.v1';
   const templatesKey = 'papergrid.templates.v1';
+  const landscapeLayouts = { 300: { cols: 25, rows: 12 }, 400: { cols: 25, rows: 16 } };
   const element = identifier => document.getElementById(identifier);
   const control = key => element(key === 'lineColor' ? 'lineColorPicker' : key);
   let state = { ...grid.defaults };
@@ -26,6 +27,7 @@
     for (const identifier of ['topExportPdfBtn', 'topPrintBtn', 'topExportSvgBtn', 'topExportPngBtn', 'exportConfigBtn', 'saveTemplateBtn']) {
       element(identifier).disabled = busy || !valid;
     }
+    element('applyLandscapeLayout').disabled = busy || !valid;
     element('previousPage').disabled = currentPage === 0 || !valid;
     element('nextPage').disabled = currentPage >= state.pageCount - 1 || !valid;
     element('pagePosition').textContent = `${currentPage + 1} / ${state.pageCount}`;
@@ -38,6 +40,9 @@
     element('validationMessage').textContent = message;
     element('validationMessage').hidden = !message;
     element('paperSheet').hidden = !valid;
+    for (const identifier of ['cellSizeDisplay', 'englishSizeDisplay', 'linedSizeDisplay']) {
+      if (!valid) element(identifier).textContent = '当前参数无法排版，请按提示调整。';
+    }
     if (message) element('saveStatus').textContent = '参数有误，未保存';
     updateActions();
   }
@@ -73,28 +78,34 @@
     updateOptions();
   }
 
-  function updateOptions() {
-    for (const type of ['composition', 'english', 'lined']) element(`${type}Section`).style.display = type === state.paperType ? 'block' : 'none';
-    element('gapConfigInputs').hidden = !state.enableGap;
-    element('gapHeightMm').disabled = !state.enableGap || state.gapMode !== 'fixed';
-    element('gapRatio').disabled = !state.enableGap || state.gapMode !== 'ratio';
-    element('gapRatioVal').textContent = `${Math.round(state.gapRatio * 100)}%`;
-    element('wordCountArea').hidden = !state.showWordCount;
-    element('linedSpacing').disabled = state.linedFillVertical;
+  function updateOptions(config = state) {
+    for (const type of ['composition', 'english', 'lined']) element(`${type}Section`).style.display = type === config.paperType ? 'block' : 'none';
+    element('gapConfigInputs').hidden = !config.enableGap;
+    element('gapHeightMm').disabled = !config.enableGap || config.gapMode !== 'fixed';
+    element('gapRatio').disabled = !config.enableGap || config.gapMode !== 'ratio';
+    element('gapRatioVal').textContent = `${Math.round(config.gapRatio * 100)}%`;
+    element('wordCountArea').hidden = !config.showWordCount;
+    element('linedSpacing').disabled = config.linedFillVertical;
+    element('englishGroupHeightLabel').textContent = config.englishFillVertical ? '组高比例基准 (mm)' : '四线三格高度 (mm)';
+    element('englishGapHeightLabel').textContent = config.englishFillVertical ? '间距比例基准 (mm)' : '组间距 (mm)';
+    element('compositionCountHint').textContent = `每栏 ${config.cols}列 × ${config.rows}行 = ${config.cols * config.rows}字`;
+    const recommendation = landscapeLayouts[config.cols * config.rows];
+    element('landscapeRecommendation').hidden = config.paperOrientation !== 'l' || config.columnsCount !== 1 || !recommendation;
+    if (recommendation) element('applyLandscapeLayout').textContent = `应用横版推荐：${recommendation.cols}列 × ${recommendation.rows}行`;
     document.querySelectorAll('.color-pill').forEach(button => {
-      const active = button.dataset.color === state.lineColor;
+      const active = button.dataset.color === config.lineColor;
       button.classList.toggle('active', active);
       button.setAttribute('aria-pressed', String(active));
     });
     document.querySelectorAll('.bg-swatch').forEach(button => {
-      const active = button.dataset.bg === state.bgColor;
+      const active = button.dataset.bg === config.bgColor;
       button.classList.toggle('active', active);
       button.setAttribute('aria-pressed', String(active));
     });
     let matched = false;
     document.querySelectorAll('.preset-card').forEach(button => {
       const preset = grid.presets[button.dataset.preset];
-      const active = Object.keys(preset).every(key => key === 'pngDpi' || preset[key] === state[key]);
+      const active = Object.keys(preset).every(key => key === 'pngDpi' || preset[key] === config[key]);
       matched ||= active;
       button.classList.toggle('active', active);
       button.setAttribute('aria-pressed', String(active));
@@ -128,6 +139,7 @@
       return true;
     } catch (error) {
       clearTimeout(saveTimer);
+      updateOptions(candidate);
       showValidation(error.message);
       return false;
     }
@@ -145,11 +157,15 @@
       element('tagWords').textContent = `${count} 字/页 · 共 ${count * state.pageCount} 字`;
     } else if (state.paperType === 'english') {
       element('tagGrid').textContent = `${state.englishRows} 组四线三格`;
-      element('tagCellSize').textContent = `组高 ${scene.english.groupHeight.toFixed(1)} · 间距 ${scene.english.gapHeight.toFixed(1)} mm`;
+      const size = `组高 ${scene.english.groupHeight.toFixed(1)} mm · 间距 ${scene.english.gapHeight.toFixed(1)} mm`;
+      element('tagCellSize').textContent = size;
+      element('englishSizeDisplay').textContent = `实际打印：${size}（${state.englishFillVertical ? '按行数铺满' : '保持指定尺寸'}）`;
       element('tagWords').textContent = `${state.pageCount} 页`;
     } else {
       element('tagGrid').textContent = `${state.linedRows} 行横线`;
-      element('tagCellSize').textContent = `行距 ${scene.lined.spacing.toFixed(1)} mm`;
+      const size = `行距 ${scene.lined.spacing.toFixed(1)} mm`;
+      element('tagCellSize').textContent = size;
+      element('linedSizeDisplay').textContent = `实际打印：${size}（${state.linedFillVertical ? '按行数铺满' : '保持指定尺寸'}）`;
       element('tagWords').textContent = `${state.pageCount} 页`;
     }
     element('layoutWarning').textContent = scene.warnings.join(' ');
@@ -277,6 +293,18 @@
       currentPage = 0;
       acceptConfiguration(grid.presets[button.dataset.preset], true);
     }));
+    element('applyLandscapeLayout').addEventListener('click', () => {
+      const recommendation = landscapeLayouts[state.cols * state.rows];
+      if (!valid || busy || state.paperType !== 'composition' || state.paperOrientation !== 'l' || state.columnsCount !== 1 || !recommendation) return;
+      try {
+        const candidate = grid.validateDocument(readForm({ ...recommendation, fillVerticalHeight: true }));
+        if (acceptConfiguration(candidate, true)) {
+          notify(`已应用横版 ${recommendation.cols}列 × ${recommendation.rows}行，字数与其他设置保持不变。`);
+        }
+      } catch (error) {
+        notify(`无法应用横版推荐：${error.message} 原配置未改变。`, true);
+      }
+    });
     document.querySelectorAll('.color-pill').forEach(button => button.addEventListener('click', () => {
       element('lineColorPicker').value = button.dataset.color;
       acceptConfiguration(readForm());

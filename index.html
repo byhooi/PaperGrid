@@ -178,17 +178,22 @@
               <div class="helper-text">小学生推荐 12 ~ 15 字</div>
             </div>
             <div class="field-item">
-              <label for="rows">每页行数</label>
+              <label for="rows">每栏行数</label>
               <input type="number" id="rows" value="20" min="5" max="40">
-              <div class="helper-text">15列 × 20行 = 300字</div>
+              <div class="helper-text" id="compositionCountHint">每栏 15列 × 20行 = 300字</div>
             </div>
           </div>
 
           <div class="checkbox-box highlight-checkbox">
             <label>
-              <input type="checkbox" id="fillVerticalHeight" checked>
-              <span><strong>纵向自动撑满页面</strong> (消除上下多余空白，最大化方格)</span>
+              <input type="checkbox" id="fillVerticalHeight" checked aria-describedby="compositionSizingHint">
+              <span><strong>自动适配页面（保持正方格）</strong></span>
             </label>
+          </div>
+          <p class="helper-text" id="compositionSizingHint">保持行列数和槽高规则，使用能容纳的最大正方格，剩余空间居中留白。取消勾选后按栏宽确定格子尺寸，超高时提示，不自动缩小。</p>
+          <div class="field-item" id="landscapeRecommendation" hidden>
+            <button type="button" id="applyLandscapeLayout" class="sub-btn">应用横版推荐</button>
+            <div class="helper-text">仅调整行列数并开启正方格适配，保持总字数及其他设置不变。</div>
           </div>
 
           <!-- 行间留白槽独立配置区 -->
@@ -271,12 +276,12 @@
         </div>
         <div class="field-grid grid-2">
           <div class="field-item">
-            <label for="englishGroupHeight">四线三格高度 (mm)</label>
+            <label for="englishGroupHeight" id="englishGroupHeightLabel">组高比例基准 (mm)</label>
             <input type="number" id="englishGroupHeight" value="9.0" min="4" max="25" step="0.5">
-            <div class="helper-text">每小格约 3mm</div>
+            <div class="helper-text">整组含三个等高小格</div>
           </div>
           <div class="field-item">
-            <label for="englishGapHeight">行与行间距 (mm)</label>
+            <label for="englishGapHeight" id="englishGapHeightLabel">间距比例基准 (mm)</label>
             <input type="number" id="englishGapHeight" value="5.0" min="2" max="20" step="0.5">
             <div class="helper-text">上下组留空距离</div>
           </div>
@@ -297,10 +302,12 @@
         </div>
         <div class="checkbox-box highlight-checkbox">
           <label>
-            <input type="checkbox" id="englishFillVertical" checked>
-            <span><strong>纵向自动铺满</strong> (按组高与间距的比例缩放)</span>
+            <input type="checkbox" id="englishFillVertical" checked aria-describedby="englishSizingHint">
+            <span><strong>按行数铺满</strong>（组高与间距同比缩放）</span>
           </label>
         </div>
+        <p class="helper-text" id="englishSizingHint">勾选时，上方毫米数仅作为比例基准，实际尺寸见下方。取消勾选则保持指定组高与间距，放不下时提示可容纳组数，不自动减行。</p>
+        <p class="helper-text" id="englishSizeDisplay" aria-live="polite"></p>
         <div class="checkbox-box">
           <label>
             <input type="checkbox" id="englishSlantedGuides">
@@ -336,10 +343,12 @@
         </div>
         <div class="checkbox-box highlight-checkbox">
           <label>
-            <input type="checkbox" id="linedFillVertical" checked>
-            <span><strong>纵向自动均分撑满</strong> (自动计算实际行距)</span>
+            <input type="checkbox" id="linedFillVertical" checked aria-describedby="linedSizingHint">
+            <span><strong>按行数铺满</strong>（自动计算实际行距）</span>
           </label>
         </div>
+        <p class="helper-text" id="linedSizingHint">取消勾选则保持指定行距，放不下时提示可容纳行数，不自动减行。</p>
+        <p class="helper-text" id="linedSizeDisplay" aria-live="polite"></p>
         <div class="checkbox-box">
           <label>
             <input type="checkbox" id="linedMarginLine">
